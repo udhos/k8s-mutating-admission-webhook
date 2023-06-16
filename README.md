@@ -1,4 +1,5 @@
 # k8s-mutating-admission-webhook
+
 k8s-mutating-admission-webhook
 
 # Concepts
@@ -60,9 +61,21 @@ $ kind create cluster --name lab
 Make sure the MutatingAdminssionController is enabled in the k8s api-server.
 
 ```
-$ kubectl api-versions | grep admissionregistration
+$ kubectl api-resources | grep -i mutating
+mutatingwebhookconfigurations                  admissionregistration.k8s.io/v1        false        MutatingWebhookConfiguration
+
+$ kubectl api-versions | grep -i admission
 admissionregistration.k8s.io/v1
-$
+
+$ kubectl get apiservices | grep -i admission
+v1.admissionregistration.k8s.io        Local     True        3m47s
+```
+
+Find existing MutatingWebhookConfigurations.
+
+```
+$ kubectl get mutatingwebhookconfigurations
+No resources found
 ```
 
 # Build
