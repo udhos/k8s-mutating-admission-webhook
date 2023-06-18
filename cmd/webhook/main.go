@@ -9,6 +9,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+
+	api_runtime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
 const version = "0.0.0"
@@ -19,11 +22,14 @@ func getVersion(me string) string {
 }
 
 type config struct {
+	codecs serializer.CodecFactory
 }
 
 func main() {
 
-	app := config{}
+	app := config{
+		codecs: serializer.NewCodecFactory(api_runtime.NewScheme()),
+	}
 
 	var showVersion bool
 	flag.BoolVar(&showVersion, "version", showVersion, "show version")
@@ -58,7 +64,7 @@ func main() {
 	register(mux, addr, health, func(w http.ResponseWriter, r *http.Request) { handlerHealth(&app, w, r) })
 	register(mux, addr, route, func(w http.ResponseWriter, r *http.Request) { handlerRoute(&app, w, r) })
 
-	go listenAndServe(server, addr, certFile, keyFile)
+	go listenAndServeTLS(server, addr, certFile, keyFile)
 
 	<-chan struct{}(nil)
 }
@@ -68,7 +74,7 @@ func register(mux *http.ServeMux, addr, path string, handler http.HandlerFunc) {
 	log.Printf("registered on TLS port %s: path %s", addr, path)
 }
 
-func listenAndServe(s *http.Server, addr, certFile, keyFile string) {
+func listenAndServeTLS(s *http.Server, addr, certFile, keyFile string) {
 	log.Printf("listening TLS on port %s", addr)
 	err := s.ListenAndServeTLS(certFile, keyFile)
 	log.Fatalf("listening TLS on port %s: %v", addr, err)
@@ -86,13 +92,6 @@ func handlerHealth(app *config, w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s: %s %s %s - 200 health ok",
 		me, r.RemoteAddr, r.Method, r.RequestURI)
 	fmt.Fprintln(w, "health ok")
-}
-
-func handlerRoute(app *config, w http.ResponseWriter, r *http.Request) {
-	const me = "handlerRoute"
-	log.Printf("%s: %s %s %s - ok",
-		me, r.RemoteAddr, r.Method, r.RequestURI)
-	fmt.Fprintln(w, "ok")
 }
 
 // envString extracts string from env var.

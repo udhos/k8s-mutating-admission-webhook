@@ -100,15 +100,17 @@ webhook
 Test.
 
 ```
-curl -k -d '{"a":"b"}' https://localhost:8443/mutate
+curl -k -d '{"a":"b"}' -H 'content-type: application/json' https://localhost:8443/mutate
 ```
 
 # References
 
 * [Article - Writing a very basic kubernetes mutating admission webhook](https://medium.com/ovni/writing-a-very-basic-kubernetes-mutating-admission-webhook-398dbbcb63ec)
+
 * [github - A playground to build a very crude k8s mutating webhook in Go](https://github.com/alex-leonhardt/k8s-mutate-webhook)
 
 * [Article - Create a Basic Kubernetes Mutating Webhook](https://trstringer.com/kubernetes-mutating-webhook/)
+
 * [github - Kubernetes Mutating Webhook example](https://github.com/trstringer/kubernetes-mutating-webhook)
 
 * [github - Kubernetes Mutating webhook sample example](https://github.com/cloud-ark/sample-mutatingwebhook)
