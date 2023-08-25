@@ -80,14 +80,14 @@ func listenAndServeTLS(s *http.Server, addr, certFile, keyFile string) {
 	log.Fatalf("listening TLS on port %s: %v", addr, err)
 }
 
-func handlerRoot(app *config, w http.ResponseWriter, r *http.Request) {
+func handlerRoot( /*app*/ _ *config, w http.ResponseWriter, r *http.Request) {
 	const me = "handlerRoot"
 	log.Printf("%s: %s %s %s - 404 not found",
 		me, r.RemoteAddr, r.Method, r.RequestURI)
 	http.Error(w, "not found", 404)
 }
 
-func handlerHealth(app *config, w http.ResponseWriter, r *http.Request) {
+func handlerHealth( /*app*/ _ *config, w http.ResponseWriter, r *http.Request) {
 	const me = "handlerHealth"
 	log.Printf("%s: %s %s %s - 200 health ok",
 		me, r.RemoteAddr, r.Method, r.RequestURI)
