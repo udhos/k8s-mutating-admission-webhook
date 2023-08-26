@@ -115,6 +115,11 @@ curl -k -d '{"a":"b"}' -H 'content-type: application/json' https://localhost:844
 
 * [github - Kubernetes Mutating webhook sample example](https://github.com/cloud-ark/sample-mutatingwebhook)
 
-* [A Kubernetes mutating webhook server that implements sidecar injection](https://github.com/morvencao/kube-sidecar-injector)
+* [Article - Diving into Kubernetes MutatingAdmissionWebhook](https://medium.com/ibm-cloud/diving-into-kubernetes-mutatingadmissionwebhook-6ef3c5695f74)
 
-* [Dynamic Admission Control Certificate Management with cert-manager](https://trstringer.com/admission-control-cert-manager/)
+* [github - A Kubernetes mutating webhook server that implements sidecar injection](https://github.com/morvencao/kube-sidecar-injector)
+
+* [Article - Dynamic Admission Control Certificate Management with cert-manager](https://trstringer.com/admission-control-cert-manager/)
+
+* [Article - In-depth introduction to Kubernetes admission webhooks](https://banzaicloud.com/blog/k8s-admission-webhooks/)
+
