@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: k8s-mutating-admission-webhook
+  name: k8s-mutating-admission-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k8s-mutating-admission-webhook
+  template:
+    metadata:
+      labels:
+        app: k8s-mutating-admission-webhook
+    spec:
+      containers:
+      - image: udhos/k8s-mutating-admission-webhook:latest
+        name: k8s-mutating-admission-webhook
+        env:
+        - name: ADDR
+          value: :8443
