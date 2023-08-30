@@ -14,10 +14,10 @@ Update files from repo:
 Search k8s-mutating-admission-webhook:
 
     $ helm search repo k8s-mutating-admission-webhook -l --version ">=0.0.0"
-    NAME                 	CHART VERSION	APP VERSION	DESCRIPTION
-    k8s-mutating-admission-webhook/k8s-mutating-admission-webhook	0.3.0        	0.3.0      	A Helm chart for Kubernetes
-    k8s-mutating-admission-webhook/k8s-mutating-admission-webhook	0.2.0        	0.2.0      	A Helm chart for Kubernetes
-    k8s-mutating-admission-webhook/k8s-mutating-admission-webhook	0.1.0        	0.1.0      	A Helm chart for Kubernetes
+    NAME                                              	CHART VERSION	APP VERSION	DESCRIPTION
+    k8s-mutating-admission-webhook/k8s-mutating-adm...	0.3.0        	0.2.0      	A Helm chart installing k8s-mutating-admission-...
+    k8s-mutating-admission-webhook/k8s-mutating-adm...	0.2.0        	0.1.0      	A Helm chart installing k8s-mutating-admission-...
+    k8s-mutating-admission-webhook/k8s-mutating-adm...	0.1.0        	0.0.0      	A Helm chart installing k8s-mutating-admission-...
 
 To install the charts:
 
