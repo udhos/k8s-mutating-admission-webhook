@@ -30,8 +30,8 @@ func handlerRoute(app *config, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("admissionReview: %v", admissionReviewRequest)
-	log.Printf("request: %v", admissionReviewRequest.Request)
+	//log.Printf("admissionReview: %v", admissionReviewRequest)
+	//log.Printf("request: %v", admissionReviewRequest.Request)
 
 	if admissionReviewRequest.Request == nil {
 		msg := fmt.Sprintf("%s: missing request in admission review", me)
@@ -70,13 +70,35 @@ func handlerRoute(app *config, w http.ResponseWriter, r *http.Request) {
 	// it does not matter what the value is, as long as the key exists.
 	admissionResponse := &admissionv1.AdmissionResponse{}
 	var patch string
-	patchType := admissionv1.PatchTypeJSONPatch
-	if _, ok := pod.Labels["hello"]; !ok {
-		patch = `[{"op":"add","path":"/metadata/labels","value":{"hello":"world"}}]`
+
+	/*
+		if _, ok := pod.Labels["hello"]; !ok {
+			patch = `[{"op":"add","path":"/metadata/labels","value":{"hello":"world"}}]`
+		}
+	*/
+
+	if pod.Namespace == "karpenter" {
+
+		log.Printf("pod %s/%s: ignored", pod.Namespace, pod.Name)
+
+	} else {
+
+		key := "CriticalAddonsOnly"
+		for i, t := range pod.Spec.Tolerations {
+			if t.Key == key && t.Operator == corev1.TolerationOpExists && t.Effect == corev1.TaintEffectNoSchedule {
+				// https://stackoverflow.com/questions/64355902/is-there-a-way-in-kubectl-patch-to-delete-a-specific-object-in-an-array-withou
+				//
+				patch = fmt.Sprintf(`[{"op":"remove","path":"/spec/tolerations/%d"}]`, i)
+				break
+			}
+		}
+		log.Printf("pod %s/%s: toleration %s found: %t", pod.Namespace, pod.Name, key, patch != "")
+
 	}
 
 	admissionResponse.Allowed = true
 	if patch != "" {
+		patchType := admissionv1.PatchTypeJSONPatch
 		admissionResponse.PatchType = &patchType
 		admissionResponse.Patch = []byte(patch)
 	}
