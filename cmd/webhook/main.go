@@ -2,6 +2,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"log"
@@ -46,16 +47,49 @@ func main() {
 		log.Print(v)
 	}
 
-	addr := envString("ADDR", ":443")
+	addr := envString("ADDR", ":8443")
 	route := envString("ROUTE", "/mutate")
 	health := envString("HEALTH", "/health")
-	certFile := envString("TLS_CERT_FILE", "cert.pem")
-	keyFile := envString("TLS_KEY_FILE", "key.pem")
+
+	//
+	// Generate certificate
+	//
+
+	const webhookNamespace = "webhook"
+	const webhookServiceName = "k8s-mutating-admission-webhook"
+	const webhookConfigName = "udhos.github.io"
+
+	dnsNames := []string{
+		webhookServiceName,
+		webhookServiceName + "." + webhookNamespace,
+		webhookServiceName + "." + webhookNamespace + ".svc",
+	}
+	commonName := webhookServiceName + "." + webhookNamespace + ".svc"
+
+	const org = "github.com/udhos/k8s-mutating-admission-webhook"
+	caPEM, certPEM, certKeyPEM, errCert := generateCert([]string{org}, dnsNames, commonName)
+	if errCert != nil {
+		log.Fatalf("Failed to generate ca and certificate key pair: %v", errCert)
+	}
+
+	pair, errPair := tls.X509KeyPair(certPEM.Bytes(), certKeyPEM.Bytes())
+	if errPair != nil {
+		log.Fatalf("Failed to load certificate key pair: %v", errPair)
+	}
+
+	//
+	// Add certificate to webhook configuration
+	//
+	errWebhookConf := createOrUpdateMutatingWebhookConfiguration(caPEM, webhookConfigName, route, webhookServiceName, webhookNamespace)
+	if errWebhookConf != nil {
+		log.Fatalf("Failed to create or update the mutating webhook configuration: %v", errWebhookConf)
+	}
 
 	mux := http.NewServeMux()
 	server := &http.Server{
-		Addr:    addr,
-		Handler: mux,
+		Addr:      addr,
+		Handler:   mux,
+		TLSConfig: &tls.Config{Certificates: []tls.Certificate{pair}},
 	}
 
 	const root = "/"
@@ -64,7 +98,11 @@ func main() {
 	register(mux, addr, health, func(w http.ResponseWriter, r *http.Request) { handlerHealth(&app, w, r) })
 	register(mux, addr, route, func(w http.ResponseWriter, r *http.Request) { handlerRoute(&app, w, r) })
 
-	go listenAndServeTLS(server, addr, certFile, keyFile)
+	go func() {
+		log.Printf("listening TLS on port %s", addr)
+		err := server.ListenAndServeTLS("", "")
+		log.Fatalf("listening TLS on port %s: %v", addr, err)
+	}()
 
 	<-chan struct{}(nil)
 }
@@ -72,12 +110,6 @@ func main() {
 func register(mux *http.ServeMux, addr, path string, handler http.HandlerFunc) {
 	mux.HandleFunc(path, handler)
 	log.Printf("registered on TLS port %s: path %s", addr, path)
-}
-
-func listenAndServeTLS(s *http.Server, addr, certFile, keyFile string) {
-	log.Printf("listening TLS on port %s", addr)
-	err := s.ListenAndServeTLS(certFile, keyFile)
-	log.Fatalf("listening TLS on port %s: %v", addr, err)
 }
 
 func handlerRoot( /*app*/ _ *config, w http.ResponseWriter, r *http.Request) {

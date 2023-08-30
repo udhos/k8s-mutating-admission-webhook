@@ -4,6 +4,7 @@ metadata:
   labels:
     app: k8s-mutating-admission-webhook
   name: k8s-mutating-admission-webhook
+  namespace: webhook
 spec:
   replicas: 1
   selector:
@@ -13,7 +14,9 @@ spec:
     metadata:
       labels:
         app: k8s-mutating-admission-webhook
+      namespace: webhook
     spec:
+      serviceAccountName: k8s-mutating-admission-webhook
       containers:
       - image: udhos/k8s-mutating-admission-webhook:latest
         name: k8s-mutating-admission-webhook

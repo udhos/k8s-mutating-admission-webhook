@@ -4,6 +4,7 @@ metadata:
   labels:
     app: k8s-mutating-admission-webhook
   name: k8s-mutating-admission-webhook
+  namespace: webhook
 spec:
   ports:
   - port: 443

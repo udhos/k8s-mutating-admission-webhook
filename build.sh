@@ -6,7 +6,9 @@ gofmt -s -w .
 
 revive ./...
 
+echo gocyclo begin
 gocyclo -over 15 .
+echo gocyclo end
 
 go mod tidy
 

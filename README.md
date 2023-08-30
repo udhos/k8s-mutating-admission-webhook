@@ -103,6 +103,30 @@ Test.
 curl -k -d '{"a":"b"}' -H 'content-type: application/json' https://localhost:8443/mutate
 ```
 
+# Test
+
+```
+./docker/build.sh
+
+docker push udhos/k8s-mutating-admission-webhook:0.0.0; docker push udhos/k8s-mutating-admission-webhook:latest
+
+kind create cluster --name lab
+
+kubectl apply -f deploy
+
+kubectl -n webhook get po
+NAME                                             READY   STATUS    RESTARTS   AGE
+k8s-mutating-admission-webhook-65f8bb6b4-h6gd4   1/1     Running   0          4m13s
+
+kubectl -n webhook logs k8s-mutating-admission-webhook-65f8bb6b4-h6gd4
+
+kubectl run nginx --image=nginx:latest
+
+kubectl logs nginx
+
+kind delete cluster --name lab
+```
+
 # References
 
 * [Article - Writing a very basic kubernetes mutating admission webhook](https://medium.com/ovni/writing-a-very-basic-kubernetes-mutating-admission-webhook-398dbbcb63ec)
