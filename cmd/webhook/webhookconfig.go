@@ -16,7 +16,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConfigName, webhookPath, webhookService, webhookNamespace string) error {
+func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConfigName, webhookPath, webhookService, webhookNamespace, failurePolicy string) error {
 	log.Println("Initializing the kube client...")
 
 	kubeconfig := os.Getenv("KUBECONFIG")
@@ -47,7 +47,10 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConf
 	mutatingWebhookConfigV1Client := clientset.AdmissionregistrationV1()
 
 	log.Printf("Creating or updating the mutatingwebhookconfiguration: %s", webhookConfigName)
-	fail := admissionregistrationv1.Fail
+
+	//fail := admissionregistrationv1.Fail
+	fp := admissionregistrationv1.FailurePolicyType(failurePolicy)
+
 	sideEffect := admissionregistrationv1.SideEffectClassNone
 	mutatingWebhookConfig := &admissionregistrationv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
@@ -93,7 +96,7 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConf
 					},
 				},
 			},
-			FailurePolicy: &fail,
+			FailurePolicy: &fp,
 
 			// AdmissionWebhookMatchConditions alpha in 1.27
 			// https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/

@@ -14,6 +14,18 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# redeploy:
+#
+# 'always': adds a random annotation to Deployment in
+#           order to redeploy the pods whenever the chart is reapplied.
+#
+# 'reconfig': adds annotations with checksums of configurations in
+#             order to redeploy the pods whenever configuration is changed.
+#
+# https://v3.helm.sh/docs/howto/charts_tips_and_tricks/#automatically-roll-deployments
+#
+redeploy: always
+
 podAnnotations: {}
 
 podSecurityContext: {}
@@ -31,6 +43,10 @@ podHealthCheck:
   port: 8443
   path: /health
   scheme: HTTPS
+
+# add custom labels to deployment pods
+customLabels:
+  app: k8s-mutating-admission-webhook
 
 resources:
   requests:
@@ -54,3 +70,15 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+#
+# See: https://stackoverflow.com/questions/72816925/helm-templating-in-configmap-for-values-yaml
+#
+configMapProperties:
+  #ADDR: ":8443"
+  #ROUTE: "/mutate"
+  #HEALTH: "/health"
+  #
+  # Ignore: means that an error calling the webhook is ignored and the API request is allowed to continue.
+  # Fail: means that an error calling the webhook causes the admission to fail and the API request to be rejected.
+  #FAILURE_POLICY: "Ignore"

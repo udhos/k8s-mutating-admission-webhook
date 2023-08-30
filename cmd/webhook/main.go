@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-const version = "0.0.0"
+const version = "0.1.0"
 
 func getVersion(me string) string {
 	return fmt.Sprintf("%s version=%s runtime=%s GOOS=%s GOARCH=%s GOMAXPROCS=%d",
@@ -51,6 +51,12 @@ func main() {
 	route := envString("ROUTE", "/mutate")
 	health := envString("HEALTH", "/health")
 
+	/*
+	   Ignore: means that an error calling the webhook is ignored and the API request is allowed to continue.
+	   Fail: means that an error calling the webhook causes the admission to fail and the API request to be rejected.
+	*/
+	failurePolicy := envString("FAILURE_POLICY", "Ignore")
+
 	//
 	// Generate certificate
 	//
@@ -80,7 +86,7 @@ func main() {
 	//
 	// Add certificate to webhook configuration
 	//
-	errWebhookConf := createOrUpdateMutatingWebhookConfiguration(caPEM, webhookConfigName, route, webhookServiceName, webhookNamespace)
+	errWebhookConf := createOrUpdateMutatingWebhookConfiguration(caPEM, webhookConfigName, route, webhookServiceName, webhookNamespace, failurePolicy)
 	if errWebhookConf != nil {
 		log.Fatalf("Failed to create or update the mutating webhook configuration: %v", errWebhookConf)
 	}
