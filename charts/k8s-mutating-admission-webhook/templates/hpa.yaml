@@ -1,0 +1,29 @@
+{{- if .Values.autoscaling.enabled }}
+apiVersion: {{ .Values.autoscaling.apiVersion }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "k8s-mutating-admission-webhook.fullname" . }}
+  labels:
+    {{- include "k8s-mutating-admission-webhook.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "k8s-mutating-admission-webhook.fullname" . }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  {{- if eq .Values.autoscaling.apiVersion "autoscaling/v1" }}
+  targetCPUUtilizationPercentage: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+  {{- else }}
+  {{- /*
+    defaults to autoscaling/v2
+  */}}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+        type: Utilization
+  {{- end }}
+{{- end }}

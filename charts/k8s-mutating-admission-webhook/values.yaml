@@ -1,0 +1,56 @@
+# Default values for k8s-mutating-admission-webhook.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: udhos/k8s-mutating-admission-webhook
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+podHealthCheck:
+  port: 8443
+  path: /health
+  scheme: HTTPS
+
+resources:
+  requests:
+    cpu: 300m
+    memory: 300Mi
+    ephemeral-storage: 200Mi
+  limits:
+    cpu: 2000m
+    memory: 300Mi
+    ephemeral-storage: 200Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 30
+  targetCPUUtilizationPercentage: 80
+  apiVersion: autoscaling/v2
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

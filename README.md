@@ -1,3 +1,9 @@
+[![license](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/udhos/k8s-mutating-admission-webhook/blob/main/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/udhos/k8s-mutating-admission-webhook)](https://goreportcard.com/report/github.com/udhos/k8s-mutating-admission-webhook)
+[![Go Reference](https://pkg.go.dev/badge/github.com/udhos/k8s-mutating-admission-webhook.svg)](https://pkg.go.dev/github.com/udhos/k8s-mutating-admission-webhook)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/k8s-mutating-admission-webhook)](https://artifacthub.io/packages/search?repo=k8s-mutating-admission-webhook)
+[![Docker Pulls](https://img.shields.io/docker/pulls/udhos/k8s-mutating-admission-webhook)](https://hub.docker.com/r/udhos/k8s-mutating-admission-webhook)
+
 # k8s-mutating-admission-webhook
 
 k8s-mutating-admission-webhook
@@ -125,6 +131,29 @@ kubectl run nginx --image=nginx:latest
 kubectl logs nginx
 
 kind delete cluster --name lab
+```
+
+# Docker
+
+Docker hub:
+
+https://hub.docker.com/r/udhos/k8s-mutating-admission-webhook
+
+
+# Helm chart
+
+## Using the helm repository
+
+See https://udhos.github.io/k8s-mutating-admission-webhook/.
+
+## Using local chart
+
+```
+kubectl create ns webhook
+
+kubectl label ns webhook webhook=yes
+
+helm install k8s-mutating-admission-webhook ./charts/k8s-mutating-admission-webhook -n webhook
 ```
 
 # References
