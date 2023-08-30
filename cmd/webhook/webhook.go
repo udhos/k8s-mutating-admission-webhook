@@ -86,9 +86,12 @@ func handlerRoute(app *config, w http.ResponseWriter, r *http.Request) {
 
 	} else {
 
+		// Find toleration "CriticalAddonsOnly Exists"
+
 		key := "CriticalAddonsOnly"
 		for i, t := range pod.Spec.Tolerations {
-			if t.Key == key && t.Operator == corev1.TolerationOpExists && t.Effect == corev1.TaintEffectNoSchedule {
+			//if t.Key == key && t.Operator == corev1.TolerationOpExists && t.Effect == corev1.TaintEffectNoSchedule {
+			if t.Key == key && t.Operator == corev1.TolerationOpExists {
 				// https://stackoverflow.com/questions/64355902/is-there-a-way-in-kubectl-patch-to-delete-a-specific-object-in-an-array-withou
 				//
 				patch = fmt.Sprintf(`[{"op":"remove","path":"/spec/tolerations/%d"}]`, i)
