@@ -65,6 +65,9 @@ func handlerRoute(app *config, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	namespace := admissionReviewRequest.Request.Namespace
+	podName := pod.GetObjectMeta().GetGenerateName()
+
 	// Create a response that will add a label to the pod if it does
 	// not already have a label with the key of "hello". In this case
 	// it does not matter what the value is, as long as the key exists.
@@ -77,9 +80,9 @@ func handlerRoute(app *config, w http.ResponseWriter, r *http.Request) {
 		}
 	*/
 
-	if pod.Namespace == "karpenter" {
+	if namespace == "karpenter" {
 
-		log.Printf("pod %s/%s: ignored", pod.Namespace, pod.Name)
+		log.Printf("pod: %s/%s: ignored", namespace, podName)
 
 	} else {
 
@@ -92,7 +95,7 @@ func handlerRoute(app *config, w http.ResponseWriter, r *http.Request) {
 				break
 			}
 		}
-		log.Printf("pod %s/%s: toleration %s found: %t", pod.Namespace, pod.Name, key, patch != "")
+		log.Printf("pod: %s/%s: toleration %s found=%t", namespace, podName, key, patch != "")
 
 	}
 
