@@ -75,6 +75,7 @@ affinity: {}
 # See: https://stackoverflow.com/questions/72816925/helm-templating-in-configmap-for-values-yaml
 #
 configMapProperties:
+  DEBUG: "true"
   #ADDR: ":8443"
   #ROUTE: "/mutate"
   #HEALTH: "/health"

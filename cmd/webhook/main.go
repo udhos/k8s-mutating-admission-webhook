@@ -10,12 +10,13 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 
 	api_runtime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-const version = "0.1.0"
+const version = "0.2.0"
 
 func getVersion(me string) string {
 	return fmt.Sprintf("%s version=%s runtime=%s GOOS=%s GOARCH=%s GOMAXPROCS=%d",
@@ -24,12 +25,14 @@ func getVersion(me string) string {
 
 type config struct {
 	codecs serializer.CodecFactory
+	debug  bool
 }
 
 func main() {
 
 	app := config{
 		codecs: serializer.NewCodecFactory(api_runtime.NewScheme()),
+		debug:  envBool("DEBUG", false),
 	}
 
 	var showVersion bool
@@ -141,5 +144,22 @@ func envString(name string, defaultValue string) string {
 		return str
 	}
 	log.Printf("%s=[%s] using %s=%s default=%s", name, str, name, defaultValue, defaultValue)
+	return defaultValue
+}
+
+// envBool extracts bool from env var.
+// It returns the provided defaultValue if the env var is empty.
+// The string returned is also recorded in logs.
+func envBool(name string, defaultValue bool) bool {
+	str := os.Getenv(name)
+	if str != "" {
+		value, errConv := strconv.ParseBool(str)
+		if errConv == nil {
+			log.Printf("%s=[%s] using %s=%t default=%t", name, str, name, value, defaultValue)
+			return value
+		}
+		log.Printf("bad %s=[%s]: error: %v", name, str, errConv)
+	}
+	log.Printf("%s=[%s] using %s=%t default=%t", name, str, name, defaultValue, defaultValue)
 	return defaultValue
 }

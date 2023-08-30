@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"log"
 	"os"
 	"path/filepath"
@@ -37,6 +38,10 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConf
 			log.Printf("in-cluster-config: %v", errInCluster)
 		}
 		config = c
+	}
+
+	if config == nil {
+		return errors.New("could not get cluster config")
 	}
 
 	clientset, errConfig := kubernetes.NewForConfig(config)

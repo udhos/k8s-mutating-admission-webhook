@@ -21,7 +21,7 @@ func handlerRoute(app *config, w http.ResponseWriter, r *http.Request) {
 	deserializer := app.codecs.UniversalDeserializer()
 
 	// Parse the AdmissionReview from the http request.
-	admissionReviewRequest, errAr := admissionReviewFromRequest(r, deserializer)
+	admissionReviewRequest, errAr := admissionReviewFromRequest(r, deserializer, app.debug)
 	if errAr != nil {
 		msg := fmt.Sprintf("%s: error getting admission review from request: %v",
 			me, errAr)
@@ -122,7 +122,9 @@ func handlerRoute(app *config, w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
-func admissionReviewFromRequest(r *http.Request, deserializer runtime.Decoder) (*admissionv1.AdmissionReview, error) {
+func admissionReviewFromRequest(r *http.Request, deserializer runtime.Decoder, debug bool) (*admissionv1.AdmissionReview, error) {
+	const me = "admissionReviewFromRequest"
+
 	// Validate that the incoming content type is correct.
 	if r.Header.Get("Content-Type") != "application/json" {
 		return nil, fmt.Errorf("expected application/json content-type")
@@ -137,6 +139,10 @@ func admissionReviewFromRequest(r *http.Request, deserializer runtime.Decoder) (
 			return nil, err
 		}
 		body = requestData
+	}
+
+	if debug {
+		log.Printf("DEBUG %s: body: %v", me, string(body))
 	}
 
 	// Decode the request body into
