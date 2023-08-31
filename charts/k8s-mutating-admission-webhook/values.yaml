@@ -83,6 +83,7 @@ configMapProperties:
   #NAMESPACE: "webhook"
   #SERVICE: "k8s-mutating-admission-webhook"
   #WEBHOOK_CONFIG_NAME: "udhos.github.io"
+  #NAMESPACE_EXCLUDE_LABEL: "webhook"
   #
   # Ignore: means that an error calling the webhook is ignored and the API request is allowed to continue.
   # Fail: means that an error calling the webhook causes the admission to fail and the API request to be rejected.
@@ -90,4 +91,3 @@ configMapProperties:
   #
   #IGNORE_NAMESPACES: "karpenter"           # space-separated list of namespaces
   #REMOVE_TOLERATIONS: "CriticalAddonsOnly" # space-separated list of tolerations
-  #NAMESPACE_EXCLUDE_LABEL: "webhook"

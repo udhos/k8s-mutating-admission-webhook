@@ -13,10 +13,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+func httpError(w http.ResponseWriter, msg string, code int) {
+	log.Printf(msg)
+	http.Error(w, msg, code)
+}
+
 func handlerRoute(app *application, w http.ResponseWriter, r *http.Request) {
 	const me = "handlerRoute"
-	log.Printf("%s: %s %s %s - ok",
-		me, r.RemoteAddr, r.Method, r.RequestURI)
+
+	if app.conf.debug {
+		log.Printf("DEBUG %s: %s %s %s",
+			me, r.RemoteAddr, r.Method, r.RequestURI)
+	}
 
 	deserializer := app.codecs.UniversalDeserializer()
 
@@ -25,8 +33,7 @@ func handlerRoute(app *application, w http.ResponseWriter, r *http.Request) {
 	if errAr != nil {
 		msg := fmt.Sprintf("%s: error getting admission review from request: %v",
 			me, errAr)
-		log.Printf(msg)
-		http.Error(w, msg, 400)
+		httpError(w, msg, 400)
 		return
 	}
 
@@ -35,8 +42,7 @@ func handlerRoute(app *application, w http.ResponseWriter, r *http.Request) {
 
 	if admissionReviewRequest.Request == nil {
 		msg := fmt.Sprintf("%s: missing request in admission review", me)
-		log.Printf(msg)
-		http.Error(w, msg, 400)
+		httpError(w, msg, 400)
 		return
 	}
 
@@ -49,8 +55,7 @@ func handlerRoute(app *application, w http.ResponseWriter, r *http.Request) {
 	if admissionReviewRequest.Request.Resource != podResource {
 		msg := fmt.Sprintf("%s: did not receive pod, got %s",
 			me, admissionReviewRequest.Request.Resource.Resource)
-		log.Printf(msg)
-		http.Error(w, msg, 400)
+		httpError(w, msg, 400)
 		return
 	}
 
@@ -60,8 +65,7 @@ func handlerRoute(app *application, w http.ResponseWriter, r *http.Request) {
 	if _, _, err := deserializer.Decode(rawRequest, nil, &pod); err != nil {
 		msg := fmt.Sprintf("%s: error decoding raw pod: %v",
 			me, err)
-		log.Printf(msg)
-		http.Error(w, msg, 500)
+		httpError(w, msg, 500)
 		return
 	}
 
@@ -149,8 +153,7 @@ func handlerRoute(app *application, w http.ResponseWriter, r *http.Request) {
 	if errMarshal != nil {
 		msg := fmt.Sprintf("%s: error marshalling response json: %v",
 			me, errMarshal)
-		log.Printf(msg)
-		http.Error(w, msg, 500)
+		httpError(w, msg, 500)
 		return
 	}
 

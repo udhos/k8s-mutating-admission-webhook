@@ -108,12 +108,14 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConf
 
 			// AdmissionWebhookMatchConditions alpha in 1.27
 			// https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
-			MatchConditions: []admissionregistrationv1.MatchCondition{
-				{
-					Name:       "excludeWebhook",
-					Expression: "!object.metadata.name.matches('^" + webhookService + "-.*$')",
+			/*
+				MatchConditions: []admissionregistrationv1.MatchCondition{
+					{
+						Name:       "excludeWebhook",
+						Expression: "!object.metadata.name.matches('^" + webhookService + "-.*$')",
+					},
 				},
-			},
+			*/
 		}},
 	}
 
