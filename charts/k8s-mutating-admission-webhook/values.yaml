@@ -90,3 +90,4 @@ configMapProperties:
   #
   #IGNORE_NAMESPACES: "karpenter"           # space-separated list of namespaces
   #REMOVE_TOLERATIONS: "CriticalAddonsOnly" # space-separated list of tolerations
+  #NAMESPACE_EXCLUDE_LABEL: "webhook"

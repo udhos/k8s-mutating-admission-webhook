@@ -78,7 +78,7 @@ func main() {
 	//
 	// Add certificate to webhook configuration
 	//
-	errWebhookConf := createOrUpdateMutatingWebhookConfiguration(caPEM, webhookConfigName, app.conf.route, webhookServiceName, webhookNamespace, app.conf.failurePolicy)
+	errWebhookConf := createOrUpdateMutatingWebhookConfiguration(caPEM, webhookConfigName, app.conf.route, webhookServiceName, webhookNamespace, app.conf.failurePolicy, app.conf.namespaceExcludeLabel)
 	if errWebhookConf != nil {
 		log.Fatalf("Failed to create or update the mutating webhook configuration: %v", errWebhookConf)
 	}

@@ -17,7 +17,10 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConfigName, webhookPath, webhookService, webhookNamespace, failurePolicy string) error {
+func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConfigName,
+	webhookPath, webhookService, webhookNamespace, failurePolicy,
+	namespaceExcludeLabel string) error {
+
 	log.Println("Initializing the kube client...")
 
 	kubeconfig := os.Getenv("KUBECONFIG")
@@ -96,7 +99,7 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConf
 				// exclude namespaces with label webhook=anything
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
-						Key:      "webhook",
+						Key:      namespaceExcludeLabel,
 						Operator: metav1.LabelSelectorOpDoesNotExist,
 					},
 				},
