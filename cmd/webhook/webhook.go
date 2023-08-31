@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func handlerRoute(app *config, w http.ResponseWriter, r *http.Request) {
+func handlerRoute(app *application, w http.ResponseWriter, r *http.Request) {
 	const me = "handlerRoute"
 	log.Printf("%s: %s %s %s - ok",
 		me, r.RemoteAddr, r.Method, r.RequestURI)
@@ -21,7 +21,7 @@ func handlerRoute(app *config, w http.ResponseWriter, r *http.Request) {
 	deserializer := app.codecs.UniversalDeserializer()
 
 	// Parse the AdmissionReview from the http request.
-	admissionReviewRequest, errAr := admissionReviewFromRequest(r, deserializer, app.debug)
+	admissionReviewRequest, errAr := admissionReviewFromRequest(r, deserializer, app.conf.debug)
 	if errAr != nil {
 		msg := fmt.Sprintf("%s: error getting admission review from request: %v",
 			me, errAr)
@@ -66,7 +66,10 @@ func handlerRoute(app *config, w http.ResponseWriter, r *http.Request) {
 	}
 
 	namespace := admissionReviewRequest.Request.Namespace
-	podName := pod.GetObjectMeta().GetGenerateName()
+	podName := pod.GetObjectMeta().GetName()
+	if podName == "" {
+		podName = pod.GetObjectMeta().GetGenerateName()
+	}
 
 	// Create a response that will add a label to the pod if it does
 	// not already have a label with the key of "hello". In this case
@@ -80,25 +83,52 @@ func handlerRoute(app *config, w http.ResponseWriter, r *http.Request) {
 		}
 	*/
 
-	if namespace == "karpenter" {
+	var ignore bool
+
+	for _, ns := range app.conf.ignoreNamespaces {
+		if namespace == ns {
+			ignore = true
+			break
+		}
+	}
+
+	if ignore {
 
 		log.Printf("pod: %s/%s: ignored", namespace, podName)
 
 	} else {
 
-		// Find toleration "CriticalAddonsOnly Exists"
+		var toRemove []int         // list of tolerations index to remove
+		found := map[string]bool{} // report only: tolerations found
 
-		key := "CriticalAddonsOnly"
-		for i, t := range pod.Spec.Tolerations {
-			//if t.Key == key && t.Operator == corev1.TolerationOpExists && t.Effect == corev1.TaintEffectNoSchedule {
-			if t.Key == key && t.Operator == corev1.TolerationOpExists {
-				// https://stackoverflow.com/questions/64355902/is-there-a-way-in-kubectl-patch-to-delete-a-specific-object-in-an-array-withou
-				//
-				patch = fmt.Sprintf(`[{"op":"remove","path":"/spec/tolerations/%d"}]`, i)
-				break
+		// scan tolerations starting from last index down to the first one
+		for i := len(pod.Spec.Tolerations) - 1; i >= 0; i-- {
+			t := pod.Spec.Tolerations[i]
+			for _, removeKey := range app.conf.removeTolerations {
+				if t.Key == removeKey && t.Operator == corev1.TolerationOpExists {
+					toRemove = append(toRemove, i) // add to remove list
+					found[removeKey] = true        // mark as found
+					break
+				}
 			}
 		}
-		log.Printf("pod: %s/%s: toleration %s found=%t", namespace, podName, key, patch != "")
+
+		// report tolerations found
+		for _, removeKey := range app.conf.removeTolerations {
+			log.Printf("pod: %s/%s: should remove toleration=%s: found=%t",
+				namespace, podName, removeKey, found[removeKey])
+		}
+
+		// build patch removing all tolerations by index
+		if len(toRemove) > 0 {
+			patch = fmt.Sprintf(`[{"op":"remove","path":"/spec/tolerations/%d"}`, toRemove[0]) // first
+
+			// 2..N
+			for _, i := range toRemove[1:] {
+				patch += fmt.Sprintf(`,{"op":"remove","path":"/spec/tolerations/%d"}`, i)
+			}
+			patch += "]"
+		}
 
 	}
 

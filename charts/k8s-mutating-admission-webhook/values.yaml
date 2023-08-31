@@ -2,8 +2,6 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-replicaCount: 1
-
 image:
   repository: udhos/k8s-mutating-admission-webhook
   pullPolicy: IfNotPresent
@@ -58,8 +56,11 @@ resources:
     memory: 300Mi
     ephemeral-storage: 200Mi
 
+# Currently autoscaling is NOT supported.
+# The webhook must have only one pod running at a time.
+# A second pod would replace the certificate injected in the webhook by the first pod.
 autoscaling:
-  enabled: true
+  enabled: false # DO NOT turn on autoscaling
   minReplicas: 1
   maxReplicas: 30
   targetCPUUtilizationPercentage: 80
@@ -79,7 +80,13 @@ configMapProperties:
   #ADDR: ":8443"
   #ROUTE: "/mutate"
   #HEALTH: "/health"
+  #NAMESPACE: "webhook"
+  #SERVICE: "k8s-mutating-admission-webhook"
+  #WEBHOOK_CONFIG_NAME: "udhos.github.io"
   #
   # Ignore: means that an error calling the webhook is ignored and the API request is allowed to continue.
   # Fail: means that an error calling the webhook causes the admission to fail and the API request to be rejected.
   #FAILURE_POLICY: "Ignore"
+  #
+  #IGNORE_NAMESPACES: "karpenter"           # space-separated list of namespaces
+  #REMOVE_TOLERATIONS: "CriticalAddonsOnly" # space-separated list of tolerations

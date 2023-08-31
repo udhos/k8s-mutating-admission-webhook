@@ -10,30 +10,24 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 
 	api_runtime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-const version = "0.4.0"
+const version = "0.5.0"
 
 func getVersion(me string) string {
 	return fmt.Sprintf("%s version=%s runtime=%s GOOS=%s GOARCH=%s GOMAXPROCS=%d",
 		me, version, runtime.Version(), runtime.GOOS, runtime.GOARCH, runtime.GOMAXPROCS(0))
 }
 
-type config struct {
+type application struct {
 	codecs serializer.CodecFactory
-	debug  bool
+	conf   config
 }
 
 func main() {
-
-	app := config{
-		codecs: serializer.NewCodecFactory(api_runtime.NewScheme()),
-		debug:  envBool("DEBUG", false),
-	}
 
 	var showVersion bool
 	flag.BoolVar(&showVersion, "version", showVersion, "show version")
@@ -50,23 +44,18 @@ func main() {
 		log.Print(v)
 	}
 
-	addr := envString("ADDR", ":8443")
-	route := envString("ROUTE", "/mutate")
-	health := envString("HEALTH", "/health")
-
-	/*
-	   Ignore: means that an error calling the webhook is ignored and the API request is allowed to continue.
-	   Fail: means that an error calling the webhook causes the admission to fail and the API request to be rejected.
-	*/
-	failurePolicy := envString("FAILURE_POLICY", "Ignore")
+	app := application{
+		codecs: serializer.NewCodecFactory(api_runtime.NewScheme()),
+		conf:   getConfig(),
+	}
 
 	//
 	// Generate certificate
 	//
 
-	const webhookNamespace = "webhook"
-	const webhookServiceName = "k8s-mutating-admission-webhook"
-	const webhookConfigName = "udhos.github.io"
+	webhookNamespace := app.conf.namespace
+	webhookServiceName := app.conf.service
+	webhookConfigName := app.conf.webhookConfigName
 
 	dnsNames := []string{
 		webhookServiceName,
@@ -89,28 +78,28 @@ func main() {
 	//
 	// Add certificate to webhook configuration
 	//
-	errWebhookConf := createOrUpdateMutatingWebhookConfiguration(caPEM, webhookConfigName, route, webhookServiceName, webhookNamespace, failurePolicy)
+	errWebhookConf := createOrUpdateMutatingWebhookConfiguration(caPEM, webhookConfigName, app.conf.route, webhookServiceName, webhookNamespace, app.conf.failurePolicy)
 	if errWebhookConf != nil {
 		log.Fatalf("Failed to create or update the mutating webhook configuration: %v", errWebhookConf)
 	}
 
 	mux := http.NewServeMux()
 	server := &http.Server{
-		Addr:      addr,
+		Addr:      app.conf.addr,
 		Handler:   mux,
 		TLSConfig: &tls.Config{Certificates: []tls.Certificate{pair}},
 	}
 
 	const root = "/"
 
-	register(mux, addr, root, func(w http.ResponseWriter, r *http.Request) { handlerRoot(&app, w, r) })
-	register(mux, addr, health, func(w http.ResponseWriter, r *http.Request) { handlerHealth(&app, w, r) })
-	register(mux, addr, route, func(w http.ResponseWriter, r *http.Request) { handlerRoute(&app, w, r) })
+	register(mux, app.conf.addr, root, func(w http.ResponseWriter, r *http.Request) { handlerRoot(&app, w, r) })
+	register(mux, app.conf.addr, app.conf.health, func(w http.ResponseWriter, r *http.Request) { handlerHealth(&app, w, r) })
+	register(mux, app.conf.addr, app.conf.route, func(w http.ResponseWriter, r *http.Request) { handlerRoute(&app, w, r) })
 
 	go func() {
-		log.Printf("listening TLS on port %s", addr)
+		log.Printf("listening TLS on port %s", app.conf.addr)
 		err := server.ListenAndServeTLS("", "")
-		log.Fatalf("listening TLS on port %s: %v", addr, err)
+		log.Fatalf("listening TLS on port %s: %v", app.conf.addr, err)
 	}()
 
 	<-chan struct{}(nil)
@@ -121,45 +110,15 @@ func register(mux *http.ServeMux, addr, path string, handler http.HandlerFunc) {
 	log.Printf("registered on TLS port %s: path %s", addr, path)
 }
 
-func handlerRoot( /*app*/ _ *config, w http.ResponseWriter, r *http.Request) {
+func handlerRoot( /*app*/ _ *application, w http.ResponseWriter, r *http.Request) {
 	const me = "handlerRoot"
 	log.Printf("%s: %s %s %s - 404 not found",
 		me, r.RemoteAddr, r.Method, r.RequestURI)
 	http.Error(w, "not found", 404)
 }
 
-func handlerHealth( /*app*/ _ *config, w http.ResponseWriter, _ /*r*/ *http.Request) {
+func handlerHealth( /*app*/ _ *application, w http.ResponseWriter, _ /*r*/ *http.Request) {
 	const me = "handlerHealth"
 	//log.Printf("%s: %s %s %s - 200 health ok", me, r.RemoteAddr, r.Method, r.RequestURI)
 	fmt.Fprintln(w, "health ok")
-}
-
-// envString extracts string from env var.
-// It returns the provided defaultValue if the env var is empty.
-// The string returned is also recorded in logs.
-func envString(name string, defaultValue string) string {
-	str := os.Getenv(name)
-	if str != "" {
-		log.Printf("%s=[%s] using %s=%s default=%s", name, str, name, str, defaultValue)
-		return str
-	}
-	log.Printf("%s=[%s] using %s=%s default=%s", name, str, name, defaultValue, defaultValue)
-	return defaultValue
-}
-
-// envBool extracts bool from env var.
-// It returns the provided defaultValue if the env var is empty.
-// The string returned is also recorded in logs.
-func envBool(name string, defaultValue bool) bool {
-	str := os.Getenv(name)
-	if str != "" {
-		value, errConv := strconv.ParseBool(str)
-		if errConv == nil {
-			log.Printf("%s=[%s] using %s=%t default=%t", name, str, name, value, defaultValue)
-			return value
-		}
-		log.Printf("bad %s=[%s]: error: %v", name, str, errConv)
-	}
-	log.Printf("%s=[%s] using %s=%t default=%t", name, str, name, defaultValue, defaultValue)
-	return defaultValue
 }
