@@ -46,8 +46,6 @@ func handlerRoute(app *application, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("request resource: %v", admissionReviewRequest.Request.Resource)
-
 	// Do server-side validation that we are only dealing with a pod resource. This
 	// should also be part of the MutatingWebhookConfiguration in the cluster, but
 	// we should verify here before continuing.
