@@ -19,7 +19,7 @@ import (
 
 func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConfigName,
 	webhookPath, webhookService, webhookNamespace, failurePolicy,
-	namespaceExcludeLabel string) error {
+	namespaceExcludeLabel, reinvocationPolicy string) error {
 
 	log.Println("Initializing the kube client...")
 
@@ -58,6 +58,7 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConf
 
 	//fail := admissionregistrationv1.Fail
 	fp := admissionregistrationv1.FailurePolicyType(failurePolicy)
+	rp := admissionregistrationv1.ReinvocationPolicyType(reinvocationPolicy)
 
 	sideEffect := admissionregistrationv1.SideEffectClassNone
 	mutatingWebhookConfig := &admissionregistrationv1.MutatingWebhookConfiguration{
@@ -104,7 +105,8 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConf
 					},
 				},
 			},
-			FailurePolicy: &fp,
+			FailurePolicy:      &fp,
+			ReinvocationPolicy: &rp,
 
 			// AdmissionWebhookMatchConditions alpha in 1.27
 			// https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
@@ -136,6 +138,7 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConf
 				reflect.DeepEqual(foundWebhookConfig.Webhooks[0].AdmissionReviewVersions, mutatingWebhookConfig.Webhooks[0].AdmissionReviewVersions) &&
 				reflect.DeepEqual(foundWebhookConfig.Webhooks[0].SideEffects, mutatingWebhookConfig.Webhooks[0].SideEffects) &&
 				reflect.DeepEqual(foundWebhookConfig.Webhooks[0].FailurePolicy, mutatingWebhookConfig.Webhooks[0].FailurePolicy) &&
+				reflect.DeepEqual(foundWebhookConfig.Webhooks[0].ReinvocationPolicy, mutatingWebhookConfig.Webhooks[0].ReinvocationPolicy) &&
 				reflect.DeepEqual(foundWebhookConfig.Webhooks[0].Rules, mutatingWebhookConfig.Webhooks[0].Rules) &&
 				reflect.DeepEqual(foundWebhookConfig.Webhooks[0].NamespaceSelector, mutatingWebhookConfig.Webhooks[0].NamespaceSelector) &&
 				reflect.DeepEqual(foundWebhookConfig.Webhooks[0].ClientConfig.CABundle, mutatingWebhookConfig.Webhooks[0].ClientConfig.CABundle) &&

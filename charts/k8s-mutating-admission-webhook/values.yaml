@@ -89,5 +89,6 @@ configMapProperties:
   # Fail: means that an error calling the webhook causes the admission to fail and the API request to be rejected.
   #FAILURE_POLICY: "Ignore"
   #
+  #REINVOCATION_POLICY: "IfNeeded"
   #IGNORE_NAMESPACES: "karpenter"           # space-separated list of namespaces
   #REMOVE_TOLERATIONS: "CriticalAddonsOnly" # space-separated list of tolerations
