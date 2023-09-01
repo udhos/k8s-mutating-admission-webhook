@@ -24,6 +24,8 @@ fullnameOverride: ""
 #
 redeploy: always
 
+priorityClassName: system-node-critical
+
 podAnnotations: {}
 
 podSecurityContext: {}

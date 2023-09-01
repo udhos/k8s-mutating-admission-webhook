@@ -29,6 +29,7 @@ spec:
         {{- include "common.tplvalues.render" ( dict "value" .Values.customLabels "context" $ ) | nindent 8 }}
         {{- end }}
     spec:
+      priorityClassName: {{ .Values.priorityClassName }}
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: topology.kubernetes.io/zone

@@ -147,6 +147,10 @@ kubectl create ns webhook
 
 kubectl label ns webhook webhook=yes
 
+# render chart to stdout
+helm template k8s-mutating-admission-webhook ./charts/k8s-mutating-admission-webhook -n webhook
+
+# install chart
 helm install k8s-mutating-admission-webhook ./charts/k8s-mutating-admission-webhook -n webhook
 ```
 
