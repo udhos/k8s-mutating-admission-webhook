@@ -26,7 +26,7 @@ COPY --from=builder /tmp/webhook /bin/webhook
 #RUN apk add curl=8.1.2-r0 libcrypto3=3.1.0-r4 libssl3=3.1.0-r4
 RUN apk update
 RUN apk add curl
-RUN apk upgrade libssl3 libcrypto3
+RUN apk upgrade libssl3 libcrypto3 busybox busybox-binsh ssl_client
 RUN adduser -D -g '' user
 USER user
 ENTRYPOINT ["/bin/webhook"]
