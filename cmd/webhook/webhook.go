@@ -84,15 +84,19 @@ func handlerRoute(app *application, w http.ResponseWriter, r *http.Request) {
 	}
 
 	if ignore {
-
 		log.Printf("pod: %s/%s: ignored", namespace, podName)
 	} else {
 		tolerationRemovalList := removeTolerations(namespace, podName, pod, app.conf.removeTolerations)
-		nodeSelectorRemovalList := removeNodeSelectors(namespace, podName, pod, app.conf.acceptNodeSelectors)
+		nodeSelectorRemovalList := removeNodeSelectors(namespace, podName, pod.Spec.NodeSelector, app.conf.acceptNodeSelectors)
 		patchList := append(tolerationRemovalList, nodeSelectorRemovalList...)
 		if len(patchList) > 0 {
 			patch = "[" + strings.Join(patchList, ",") + "]"
 		}
+	}
+
+	if app.conf.debug {
+		log.Printf("DEBUG %s: patch: %s",
+			me, patch)
 	}
 
 	admissionResponse.Allowed = true
@@ -138,7 +142,7 @@ func removeTolerations(namespace, podName string, pod corev1.Pod, tolerations []
 
 	// report tolerations found
 	for _, removeKey := range tolerations {
-		log.Printf("pod: %s/%s: will remove toleration=%s: %t",
+		log.Printf("pod: %s/%s: toleration=%s: removing=%t",
 			namespace, podName, removeKey, found[removeKey])
 	}
 
@@ -150,22 +154,22 @@ func removeTolerations(namespace, podName string, pod corev1.Pod, tolerations []
 	return list
 }
 
-func removeNodeSelectors(namespace, podName string, pod corev1.Pod, acceptSelectors []string) []string {
+func removeNodeSelectors(namespace, podName string, nodeSelector map[string]string, acceptSelectors []string) []string {
 	var toRemove []string
 
-	for removeKey := range pod.Spec.NodeSelector {
-		var found bool
+	for removeKey := range nodeSelector {
+		var accepted bool
 		for _, acceptKey := range acceptSelectors {
 			if removeKey == acceptKey {
-				found = true
+				accepted = true
 				break
 			}
 		}
-		if !found {
+		if !accepted {
 			toRemove = append(toRemove, fmt.Sprintf(`{"op":"remove","path":"/spec/nodeSelector/%s"}`, removeKey))
 		}
-		log.Printf("pod: %s/%s: will accept nodeSelector=%s: %t",
-			namespace, podName, removeKey, found)
+		log.Printf("pod: %s/%s: nodeSelector=%s: accepted=%t",
+			namespace, podName, removeKey, accepted)
 	}
 
 	return toRemove

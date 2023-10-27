@@ -172,7 +172,13 @@ helm install k8s-mutating-admission-webhook ./charts/k8s-mutating-admission-webh
 
 ## Patch
 
+```json
+[
+    {"op":"add","path":"/metadata/labels","value":{"hello":"world"}}
+]
 ```
+
+```json
 PATCH /my/data HTTP/1.1
 Host: example.org
 Content-Length: 326

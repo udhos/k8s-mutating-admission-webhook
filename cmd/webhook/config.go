@@ -47,7 +47,7 @@ func getConfig() config {
 		removeTolerations: strings.Fields(envString("REMOVE_TOLERATIONS", "CriticalAddonsOnly")),
 
 		// space-separated list of nodeSelectors
-		acceptNodeSelectors: strings.Fields(envString("ACCEPT_NODE_SELECTORS", "beta.kubernetes.io/os")),
+		acceptNodeSelectors: strings.Fields(envString("ACCEPT_NODE_SELECTORS", "kubernetes.io/os")),
 	}
 }
 

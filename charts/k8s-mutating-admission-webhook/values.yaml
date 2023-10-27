@@ -92,6 +92,6 @@ configMapProperties:
   #FAILURE_POLICY: "Ignore"
   #
   #REINVOCATION_POLICY: "IfNeeded"
-  #IGNORE_NAMESPACES: "karpenter"                 # space-separated list of namespaces
-  #REMOVE_TOLERATIONS: "CriticalAddonsOnly"       # space-separated list of tolerations
-  #ACCEPT_NODE_SELECTORS: "beta.kubernetes.io/os" # space-separated list of tolerations
+  #IGNORE_NAMESPACES: "karpenter"            # space-separated list of namespaces
+  #REMOVE_TOLERATIONS: "CriticalAddonsOnly"  # space-separated list of tolerations
+  #ACCEPT_NODE_SELECTORS: "kubernetes.io/os" # space-separated list of tolerations
