@@ -1,7 +1,7 @@
 # STEP 1 build executable binary
 
 #FROM golang:alpine as builder
-FROM golang:1.21.1-alpine3.18 as builder
+FROM golang:1.21.3-alpine3.18 as builder
 
 RUN apk update
 RUN apk add git
@@ -21,7 +21,7 @@ RUN go build -o /tmp/webhook github.com/udhos/k8s-mutating-admission-webhook/cmd
 #
 # curl: https://security.alpinelinux.org/srcpkg/curl
 #
-FROM alpine:3.18.0
+FROM alpine:3.18.4
 COPY --from=builder /tmp/webhook /bin/webhook
 #RUN apk add curl=8.1.2-r0 libcrypto3=3.1.0-r4 libssl3=3.1.0-r4
 RUN apk update

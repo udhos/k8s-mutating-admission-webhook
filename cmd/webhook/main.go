@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-const version = "1.0.1"
+const version = "1.1.0"
 
 func getVersion(me string) string {
 	return fmt.Sprintf("%s version=%s runtime=%s GOOS=%s GOARCH=%s GOMAXPROCS=%d",
@@ -78,12 +78,17 @@ func main() {
 	//
 	// Add certificate to webhook configuration
 	//
+
 	errWebhookConf := createOrUpdateMutatingWebhookConfiguration(caPEM, webhookConfigName, app.conf.route,
 		webhookServiceName, webhookNamespace, app.conf.failurePolicy, app.conf.namespaceExcludeLabel,
 		app.conf.reinvocationPolicy)
 	if errWebhookConf != nil {
 		log.Fatalf("Failed to create or update the mutating webhook configuration: %v", errWebhookConf)
 	}
+
+	//
+	// Create web server
+	//
 
 	mux := http.NewServeMux()
 	server := &http.Server{
@@ -92,19 +97,23 @@ func main() {
 		TLSConfig: &tls.Config{Certificates: []tls.Certificate{pair}},
 	}
 
+	//
+	// Register routes
+	//
+
 	const root = "/"
 
 	register(mux, app.conf.addr, root, func(w http.ResponseWriter, r *http.Request) { handlerRoot(&app, w, r) })
 	register(mux, app.conf.addr, app.conf.health, func(w http.ResponseWriter, r *http.Request) { handlerHealth(&app, w, r) })
 	register(mux, app.conf.addr, app.conf.route, func(w http.ResponseWriter, r *http.Request) { handlerRoute(&app, w, r) })
 
-	go func() {
-		log.Printf("listening TLS on port %s", app.conf.addr)
-		err := server.ListenAndServeTLS("", "")
-		log.Fatalf("listening TLS on port %s: %v", app.conf.addr, err)
-	}()
+	//
+	// Start web server
+	//
 
-	<-chan struct{}(nil)
+	log.Printf("listening TLS on port %s", app.conf.addr)
+	err := server.ListenAndServeTLS("", "")
+	log.Fatalf("listening TLS on port %s: %v", app.conf.addr, err)
 }
 
 func register(mux *http.ServeMux, addr, path string, handler http.HandlerFunc) {

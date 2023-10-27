@@ -8,6 +8,20 @@
 
 k8s-mutating-admission-webhook
 
+* [Concepts](#concepts)
+* [Create kind cluster](#create-kind-cluster)
+* [Build](#build)
+* [Test](#test)
+* [Docker](#docker)
+* [Helm chart](#helm-chart)
+  * [Using the helm repository](#using-the-helm-repository)
+  * [Using local chart](#using-local-chart)
+* [References](#references)
+  * [Patch](#patch)
+  * [Webhook](#webhook)
+
+Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc.go)
+
 # Concepts
 
 The MutatingWebhookConfiguration is where we tell k8s which resource requests should be sent to our webhook.
@@ -155,6 +169,33 @@ helm install k8s-mutating-admission-webhook ./charts/k8s-mutating-admission-webh
 ```
 
 # References
+
+## Patch
+
+```
+PATCH /my/data HTTP/1.1
+Host: example.org
+Content-Length: 326
+Content-Type: application/json-patch+json
+If-Match: "abc123"
+
+[
+    { "op": "test", "path": "/a/b/c", "value": "foo" },
+    { "op": "remove", "path": "/a/b/c" },
+    { "op": "add", "path": "/a/b/c", "value": [ "foo", "bar" ] },
+    { "op": "replace", "path": "/a/b/c", "value": 42 },
+    { "op": "move", "from": "/a/b/c", "path": "/a/b/d" },
+    { "op": "copy", "from": "/a/b/d", "path": "/a/b/e" }
+]
+```
+
+* [Is there a way in "kubectl patch" to delete a specific object in an array without specifying the index?](https://stackoverflow.com/questions/64355902/is-there-a-way-in-kubectl-patch-to-delete-a-specific-object-in-an-array-withou)
+
+* [JSON Patch](https://www.rfc-editor.org/rfc/rfc6902)
+
+* [JSON Pointer](https://www.rfc-editor.org/rfc/rfc6901)
+
+## Webhook
 
 * [Article - Writing a very basic kubernetes mutating admission webhook](https://medium.com/ovni/writing-a-very-basic-kubernetes-mutating-admission-webhook-398dbbcb63ec)
 

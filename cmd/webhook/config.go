@@ -21,9 +21,10 @@ type config struct {
 	// Fail: means that an error calling the webhook causes the admission to fail and the API request to be rejected.
 	failurePolicy string
 
-	reinvocationPolicy string
-	ignoreNamespaces   []string
-	removeTolerations  []string
+	reinvocationPolicy  string
+	ignoreNamespaces    []string
+	removeTolerations   []string
+	acceptNodeSelectors []string
 }
 
 func getConfig() config {
@@ -44,6 +45,9 @@ func getConfig() config {
 
 		// space-separated list of tolerations
 		removeTolerations: strings.Fields(envString("REMOVE_TOLERATIONS", "CriticalAddonsOnly")),
+
+		// space-separated list of nodeSelectors
+		acceptNodeSelectors: strings.Fields(envString("ACCEPT_NODE_SELECTORS", "beta.kubernetes.io/os")),
 	}
 }
 
