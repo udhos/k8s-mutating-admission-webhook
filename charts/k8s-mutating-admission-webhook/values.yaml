@@ -94,4 +94,4 @@ configMapProperties:
   #REINVOCATION_POLICY: "IfNeeded"
   #IGNORE_NAMESPACES: "karpenter"            # space-separated list of namespaces
   #REMOVE_TOLERATIONS: "CriticalAddonsOnly"  # space-separated list of tolerations
-  #ACCEPT_NODE_SELECTORS: "kubernetes.io/os" # space-separated list of tolerations
+  #ACCEPT_NODE_SELECTORS: "kubernetes.io/os" # space-separated list of nodeSelectors
