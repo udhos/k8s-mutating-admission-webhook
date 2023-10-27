@@ -166,13 +166,20 @@ func removeNodeSelectors(namespace, podName string, nodeSelector map[string]stri
 			}
 		}
 		if !accepted {
-			toRemove = append(toRemove, fmt.Sprintf(`{"op":"remove","path":"/spec/nodeSelector/%s"}`, removeKey))
+			key := escapeJSONPointer(removeKey)
+			toRemove = append(toRemove, fmt.Sprintf(`{"op":"remove","path":"/spec/nodeSelector/%s"}`, key))
 		}
 		log.Printf("pod: %s/%s: nodeSelector=%s: accepted=%t",
 			namespace, podName, removeKey, accepted)
 	}
 
 	return toRemove
+}
+
+// https://jsonpatch.com/#json-pointer
+func escapeJSONPointer(s string) string {
+	s1 := strings.ReplaceAll(s, "~", "~0")
+	return strings.ReplaceAll(s1, "/", "~1")
 }
 
 func admissionReviewFromRequest(r *http.Request, deserializer runtime.Decoder, debug bool) (*admissionv1.AdmissionReview, error) {
