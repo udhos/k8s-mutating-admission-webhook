@@ -11,11 +11,10 @@ import (
 	"path/filepath"
 	"runtime"
 
+	_ "go.uber.org/automaxprocs"
 	api_runtime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
-
-const version = "1.1.2"
 
 func getVersion(me string) string {
 	return fmt.Sprintf("%s version=%s runtime=%s GOOS=%s GOARCH=%s GOMAXPROCS=%d",
