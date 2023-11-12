@@ -3,6 +3,7 @@
 # the ./docs dir is published as https://udhos.github.io/k8s-mutating-admission-webhook/
 
 chart_dir=charts/k8s-mutating-admission-webhook
+chart_url=https://udhos.github.io/k8s-mutating-admission-webhook/
 
 # generate new chart package from source into ./docs
 helm package $chart_dir -d ./docs
@@ -23,13 +24,13 @@ cp docs/${chart_pkg} charts-tmp
 #
 
 git checkout docs/index.yaml ;# reset index
-helm repo index charts-tmp --url https://udhos.github.io/k8s-mutating-admission-webhook/ --merge docs/index.yaml
+
+# regenerate the index from existing chart packages
+helm repo index charts-tmp --url $chart_url --merge docs/index.yaml
+
 # new merged chart index was generated as ./charts-tmp/index.yaml,
 # copy it back to ./docs
 cp charts-tmp/index.yaml docs
-
-# regenerate the index from existing chart packages
-#helm repo index ./docs --url https://udhos.github.io/k8s-mutating-admission-webhook/
 
 echo "#"
 echo "# check that ./docs is fine then:"
