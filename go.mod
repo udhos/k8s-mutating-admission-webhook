@@ -1,6 +1,6 @@
 module github.com/udhos/k8s-mutating-admission-webhook
 
-go 1.21.4
+go 1.21.5
 
 require (
 	go.uber.org/automaxprocs v1.5.3
