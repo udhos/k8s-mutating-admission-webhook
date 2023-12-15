@@ -15,7 +15,7 @@ import (
 )
 
 func httpError(w http.ResponseWriter, msg string, code int) {
-	log.Printf(msg)
+	log.Print(msg)
 	http.Error(w, msg, code)
 }
 

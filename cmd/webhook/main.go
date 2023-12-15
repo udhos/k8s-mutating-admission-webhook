@@ -128,7 +128,5 @@ func handlerRoot( /*app*/ _ *application, w http.ResponseWriter, r *http.Request
 }
 
 func handlerHealth( /*app*/ _ *application, w http.ResponseWriter, _ /*r*/ *http.Request) {
-	const me = "handlerHealth"
-	//log.Printf("%s: %s %s %s - 200 health ok", me, r.RemoteAddr, r.Method, r.RequestURI)
 	fmt.Fprintln(w, "health ok")
 }
