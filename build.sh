@@ -1,6 +1,7 @@
 #!/bin/bash
 
 go install golang.org/x/vuln/cmd/govulncheck@latest
+go install golang.org/x/tools/cmd/deadcode@latest
 
 gofmt -s -w .
 
@@ -13,6 +14,8 @@ echo gocyclo end
 go mod tidy
 
 govulncheck ./...
+
+deadcode ./cmd/*
 
 go env -w CGO_ENABLED=1
 
