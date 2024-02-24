@@ -23,8 +23,9 @@ type config struct {
 
 	reinvocationPolicy  string
 	ignoreNamespaces    []string
-	removeTolerations   []string
 	acceptNodeSelectors []string
+
+	rulesFile string
 }
 
 func getConfig() config {
@@ -43,11 +44,10 @@ func getConfig() config {
 		// space-separated list of namespaces
 		ignoreNamespaces: strings.Fields(envString("IGNORE_NAMESPACES", "karpenter")),
 
-		// space-separated list of tolerations
-		removeTolerations: strings.Fields(envString("REMOVE_TOLERATIONS", "CriticalAddonsOnly")),
-
 		// space-separated list of nodeSelectors
 		acceptNodeSelectors: strings.Fields(envString("ACCEPT_NODE_SELECTORS", "kubernetes.io/os")),
+
+		rulesFile: envString("RULES", "rules.yaml"),
 	}
 }
 

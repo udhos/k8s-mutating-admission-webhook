@@ -6,3 +6,12 @@ data:
   {{- if .Values.configMapProperties }}
   {{- include "common.tplvalues.render" ( dict "value" .Values.configMapProperties "context" $ ) | nindent 2 }}
   {{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "k8s-mutating-admission-webhook.fullname" . }}-config
+data:
+  {{- if .Values.configDir }}
+  {{- include "common.tplvalues.render" ( dict "value" .Values.configDir "context" $ ) | nindent 2 }}
+  {{- end }}

@@ -1,10 +1,194 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
+
+	corev1 "k8s.io/api/core/v1"
 )
+
+type tolerationTestCase struct {
+	testName        string
+	rules           string
+	podTolerations  string
+	namespace       string
+	podName         string
+	expectedIndices string
+}
+
+const emptyRule = ``
+const emptyTolerations = `[]`
+
+const tolerations1 = `[{"key":"key1","operator":"Equal","value":"value1","effect":"NoSchedule"}]`
+const tolerations3 = `[
+    {"key":"key1","operator":"Equal","value":"value1","effect":"NoSchedule"},
+    {"key":"key2","operator":"Equal","value":"value2","effect":"NoSchedule"},
+    {"key":"key3","operator":"Equal","value":"value3","effect":"NoSchedule"}
+    ]`
+const tolerationsExists = `[
+        {"key":"key1","operator":"Equal","value":"value1","effect":"NoSchedule"},
+        {"operator":"Exists"},
+        {"key":"key3","operator":"Exists"},
+        {"operator":"Exists","value":"value3"},
+        {"operator":"Exists","effect":"NoSchedule"}
+        ]`
+
+const rulesRejectKey2 = `
+restrict_tolerations:
+    - toleration:
+        # match key1
+        key: "^key2$"
+        operator: ".*"
+        value: ".*"
+        effect: ".*"
+      allowed_pods:
+        # match NO pod
+        - namespace: "^$"
+          name: "^$"
+`
+
+const rulesRejectAll = `
+restrict_tolerations:
+  - toleration:
+      # match any toleration
+      key: ".*"
+      operator: ".*"
+      value: ".*"
+      effect: ".*"
+    allowed_pods:
+      # match NO pod
+      - namespace: "^$"
+        name: "^$"
+`
+
+const rulesRejectOnlyExists = `
+restrict_tolerations:
+  - toleration:
+      # match only Exists
+      key: "^$"
+      operator: "^Exists$"
+      value: "^$"
+      effect: "^$"
+    allowed_pods:
+      # match NO pod
+      - namespace: "^$"
+        name: "^$"
+`
+
+const rulesOnlyPodDaemonSetCanHaveExactlyExists = `
+restrict_tolerations:
+  - toleration:
+      # match exactly Exists
+      key: "^$"
+      operator: "^Exists$"
+      value: "^$"
+      effect: "^$"
+    allowed_pods:
+      # this first rule does nothing, it serves only to test multiple pod rules
+      - namespace: "^$"
+        name: "^$"
+      # match only POD prefixed as daemonset-
+      - namespace: ".*"
+        name: "^daemonset-"
+`
+
+var tolerationTestTable = []tolerationTestCase{
+	{
+		testName:        "empty rule, empty toleration",
+		rules:           emptyRule,
+		podTolerations:  emptyTolerations,
+		namespace:       "default",
+		podName:         "pod-1",
+		expectedIndices: "[]",
+	},
+	{
+		testName:        "empty rule, one toleration",
+		rules:           emptyRule,
+		podTolerations:  tolerations1,
+		namespace:       "default",
+		podName:         "pod-1",
+		expectedIndices: "[]",
+	},
+	{
+		testName:        "rule rejects all tolerations, one toleration",
+		rules:           rulesRejectAll,
+		podTolerations:  tolerations1,
+		namespace:       "default",
+		podName:         "pod-1",
+		expectedIndices: "[0]",
+	},
+	{
+		testName:        "rule rejects all tolerations, three tolerations",
+		rules:           rulesRejectAll,
+		podTolerations:  tolerations3,
+		namespace:       "default",
+		podName:         "pod-1",
+		expectedIndices: "[2 1 0]",
+	},
+	{
+		testName:        "rule rejects key2, three toleration",
+		rules:           rulesRejectKey2,
+		podTolerations:  tolerations3,
+		namespace:       "default",
+		podName:         "pod-1",
+		expectedIndices: "[1]",
+	},
+	{
+		testName:        "no pod can have exactly Exists",
+		rules:           rulesRejectOnlyExists,
+		podTolerations:  tolerationsExists,
+		namespace:       "default",
+		podName:         "pod-1",
+		expectedIndices: "[1]",
+	},
+	{
+		testName:        "only daemonset- prefixed pod can have exactly Exists, no daemonset",
+		rules:           rulesOnlyPodDaemonSetCanHaveExactlyExists,
+		podTolerations:  tolerationsExists,
+		namespace:       "default",
+		podName:         "pod-1",
+		expectedIndices: "[1]",
+	},
+	{
+		testName:        "only daemonset- prefixed pod can have exactly Exists, have daemonset",
+		rules:           rulesOnlyPodDaemonSetCanHaveExactlyExists,
+		podTolerations:  tolerationsExists,
+		namespace:       "default",
+		podName:         "daemonset-1",
+		expectedIndices: "[]",
+	},
+}
+
+func TestTolerationRules(t *testing.T) {
+
+	for i, data := range tolerationTestTable {
+		testLabel := fmt.Sprintf("%d: %s:", i, data.testName)
+
+		r, errRule := newRules([]byte(data.rules))
+		if errRule != nil {
+			t.Errorf("%s bad rule: %v", testLabel, errRule)
+		}
+
+		var podTolerations []corev1.Toleration
+		errTol := json.Unmarshal([]byte(data.podTolerations), &podTolerations)
+		if errTol != nil {
+			t.Errorf("%s bad pod tolerations: %v", testLabel, errTol)
+		}
+
+		//t.Logf("%s rules=%v podTolerations=%v", testLabel, r, podTolerations)
+
+		list := removeTolerationsIndices(data.namespace, data.podName, podTolerations, r.RestrictTolerations)
+
+		str := fmt.Sprintf("%v", list)
+
+		if str != data.expectedIndices {
+			t.Errorf("%s bad removal indices: got=%s expected=%s", testLabel, str, data.expectedIndices)
+		}
+	}
+}
 
 func TestRemoveNodeSelector(t *testing.T) {
 

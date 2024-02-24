@@ -22,3 +22,5 @@
 go.work
 
 charts-tmp
+
+docker-push.sh

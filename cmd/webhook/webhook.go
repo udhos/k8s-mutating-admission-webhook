@@ -19,8 +19,8 @@ func httpError(w http.ResponseWriter, msg string, code int) {
 	http.Error(w, msg, code)
 }
 
-func handlerRoute(app *application, w http.ResponseWriter, r *http.Request) {
-	const me = "handlerRoute"
+func handlerWebhook(app *application, w http.ResponseWriter, r *http.Request) {
+	const me = "handlerWebhook"
 
 	if app.conf.debug {
 		log.Printf("DEBUG %s: %s %s %s",
@@ -86,7 +86,7 @@ func handlerRoute(app *application, w http.ResponseWriter, r *http.Request) {
 	if ignore {
 		log.Printf("pod: %s/%s: ignored", namespace, podName)
 	} else {
-		tolerationRemovalList := removeTolerations(namespace, podName, pod, app.conf.removeTolerations)
+		tolerationRemovalList := removeTolerations(namespace, podName, pod.Spec.Tolerations, app.rules.RestrictTolerations)
 		nodeSelectorRemovalList := removeNodeSelectors(namespace, podName, pod.Spec.NodeSelector, app.conf.acceptNodeSelectors)
 		patchList := append(tolerationRemovalList, nodeSelectorRemovalList...)
 		if len(patchList) > 0 {
@@ -95,7 +95,7 @@ func handlerRoute(app *application, w http.ResponseWriter, r *http.Request) {
 	}
 
 	if app.conf.debug {
-		log.Printf("DEBUG %s: patch: %s",
+		log.Printf("DEBUG %s: patch: '%s'",
 			me, patch)
 	}
 
@@ -124,34 +124,89 @@ func handlerRoute(app *application, w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
-func removeTolerations(namespace, podName string, pod corev1.Pod, tolerations []string) []string {
-	var toRemove []int         // list of tolerations index to remove
-	found := map[string]bool{} // report only: tolerations found
+func tolerationToString(podToleration corev1.Toleration) string {
+	return fmt.Sprintf("key(%s) op(%s) value(%s) effect(%s)",
+		podToleration.Key,
+		podToleration.Operator,
+		podToleration.Value,
+		podToleration.Effect)
+}
 
-	// scan tolerations starting from last index down to the first one
-	for i := len(pod.Spec.Tolerations) - 1; i >= 0; i-- {
-		t := pod.Spec.Tolerations[i]
-		for _, removeKey := range tolerations {
-			if t.Key == removeKey && t.Operator == corev1.TolerationOpExists {
-				toRemove = append(toRemove, i) // add to remove list
-				found[removeKey] = true        // mark as found
-				break
-			}
-		}
-	}
+func removeTolerations(namespace, podName string, podTolerations []corev1.Toleration,
+	restrictToleration []restrictTolerationConfig) []string {
 
-	// report tolerations found
-	for _, removeKey := range tolerations {
-		log.Printf("pod: %s/%s: toleration=%s: removing=%t",
-			namespace, podName, removeKey, found[removeKey])
-	}
+	toRemove := removeTolerationsIndices(namespace, podName, podTolerations,
+		restrictToleration)
 
 	// build patch list removing all tolerations by index
-	var list []string
+	list := make([]string, 0, len(toRemove))
 	for _, i := range toRemove {
 		list = append(list, fmt.Sprintf(`{"op":"remove","path":"/spec/tolerations/%d"}`, i))
 	}
 	return list
+}
+
+func removeTolerationsIndices(namespace, podName string, podTolerations []corev1.Toleration,
+	restrictToleration []restrictTolerationConfig) []int {
+
+	var toRemove []int // list of tolerations index to remove
+
+	size := len(podTolerations)
+	removed := make([]bool, size) // report only: tolerations removed
+	track := make([]string, size)
+
+	// scan pod tolerations starting from last index down to the first one
+	for i := size - 1; i >= 0; i-- {
+		pt := podTolerations[i]
+
+		track[i] = "[no toleration rule matched]"
+
+		// scan restricted tolerations
+		for j, rt := range restrictToleration {
+
+			if isRestricted := rt.Toleration.match(pt); !isRestricted {
+				continue // this rule does not restrict the pod toleration
+			}
+
+			//
+			// pt is restricted toleration, can the pod have it?
+			//
+			var isAllowed bool
+			podRule := -1
+			for k, allowedPod := range rt.AllowedPods {
+				if allowedPod.match(namespace, podName) {
+					isAllowed = true
+					podRule = k
+					break
+				}
+			}
+			if !isAllowed {
+				//
+				// pod is not allowed to have the toleration pt
+				//
+				toRemove = append(toRemove, i) // add to remove list
+				removed[i] = true
+				track[i] = fmt.Sprintf("[tolerationRule=%d/%d]",
+					j, len(restrictToleration)) // explain removal
+
+				// stop checking pt against restricted tolerations
+				break
+			}
+
+			track[i] = fmt.Sprintf("[tolerationRule=%d/%d podRule=%d/%d]",
+				j, len(restrictToleration), podRule, len(rt.AllowedPods)) // explain acceptance
+		}
+	}
+
+	// report tolerations removed
+	for i, rem := range removed {
+		tol := tolerationToString(podTolerations[i])
+		trk := track[i]
+		log.Printf("pod: %s/%s: toleration=%s: removed=%t %s",
+			namespace, podName, tol, rem, trk)
+	}
+
+	return toRemove
 }
 
 func removeNodeSelectors(namespace, podName string, nodeSelector map[string]string, acceptSelectors []string) []string {

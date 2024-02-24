@@ -12,6 +12,7 @@ import (
 	"runtime"
 
 	_ "go.uber.org/automaxprocs"
+	"gopkg.in/yaml.v3"
 	api_runtime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
@@ -24,6 +25,7 @@ func getVersion(me string) string {
 type application struct {
 	codecs serializer.CodecFactory
 	conf   config
+	rules  rulesConfig
 }
 
 func main() {
@@ -46,6 +48,21 @@ func main() {
 	app := application{
 		codecs: serializer.NewCodecFactory(api_runtime.NewScheme()),
 		conf:   getConfig(),
+	}
+
+	{
+		r, errRules := loadRules(app.conf.rulesFile)
+		if errRules != nil {
+			log.Fatalf("rules load: %s: %v", app.conf.rulesFile, errRules)
+		}
+
+		out, errY := yaml.Marshal(r)
+		if errY != nil {
+			log.Fatalf("rules yaml: %v", errY)
+		}
+		log.Printf("rules loaded:\n%s", string(out))
+
+		app.rules = r
 	}
 
 	//
@@ -104,7 +121,7 @@ func main() {
 
 	register(mux, app.conf.addr, root, func(w http.ResponseWriter, r *http.Request) { handlerRoot(&app, w, r) })
 	register(mux, app.conf.addr, app.conf.health, func(w http.ResponseWriter, r *http.Request) { handlerHealth(&app, w, r) })
-	register(mux, app.conf.addr, app.conf.route, func(w http.ResponseWriter, r *http.Request) { handlerRoute(&app, w, r) })
+	register(mux, app.conf.addr, app.conf.route, func(w http.ResponseWriter, r *http.Request) { handlerWebhook(&app, w, r) })
 
 	//
 	// Start web server

@@ -79,6 +79,7 @@ affinity: {}
 #
 configMapProperties:
   DEBUG: "true"
+  RULES: /etc/webhook/rules.yaml
   #ADDR: ":8443"
   #ROUTE: "/mutate"
   #HEALTH: "/health"
@@ -93,5 +94,36 @@ configMapProperties:
   #
   #REINVOCATION_POLICY: "IfNeeded"
   #IGNORE_NAMESPACES: "karpenter"            # space-separated list of namespaces
-  #REMOVE_TOLERATIONS: "CriticalAddonsOnly"  # space-separated list of tolerations
   #ACCEPT_NODE_SELECTORS: "kubernetes.io/os" # space-separated list of nodeSelectors
+
+configDir:
+  rules.yaml: |
+    restrict_tolerations:
+
+      # if a toleration is unmatched, it is allowed for all PODs
+      #
+      # if a toleration is matched, only matched PODs can have it
+
+      # remove key1 from any pod
+      - toleration:
+          # match key1 regardless of other fields
+          key: "^key2$"
+          operator: ".*"
+          value: ".*"
+          effect: ".*"
+        allowed_pods:
+          # match NO pod
+          - namespace: "^$"
+            name: "^$"
+
+      # remove exactly Exists from all pods except pods prefixed with "^daemonset-"
+      - toleration:
+          # match exactly Exists
+          key: "^$"
+          operator: "^Exists$"
+          value: "^$"
+          effect: "^$"
+        allowed_pods:
+          # match only POD prefixed as daemonset-
+          - namespace: ".*"
+            name: "^daemonset-"

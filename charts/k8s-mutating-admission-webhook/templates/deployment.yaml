@@ -50,7 +50,10 @@ spec:
       serviceAccountName: {{ include "k8s-mutating-admission-webhook.fullname" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      volumes: []
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "k8s-mutating-admission-webhook.fullname" . }}-config
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       containers:
@@ -66,6 +69,9 @@ spec:
           envFrom:
           - configMapRef:
               name: {{ include "k8s-mutating-admission-webhook.fullname" . }}
+          volumeMounts:
+          - name: config
+            mountPath: /etc/webhook
           startupProbe:
             # must initialize within 3*100=300 seconds
             httpGet:
