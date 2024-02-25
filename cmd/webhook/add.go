@@ -32,7 +32,13 @@ func addOne(add addConfig) []string {
 		list = append(list, addToleration(tol))
 	}
 
-	list = append(list, addNodeSelector(add.NodeSelector))
+	ns, errNs := addNodeSelector(add.NodeSelector)
+	if errNs != nil {
+		log.Printf("ERROR: addOne: %v", errNs)
+		return list
+	}
+
+	list = append(list, ns)
 
 	return list
 }
@@ -42,15 +48,19 @@ func addToleration(tol tolerationConfig) string {
 		tol.Key, tol.Operator, tol.Effect, tol.Value)
 }
 
-func addNodeSelector(nodeSelector map[string]string) string {
+func addNodeSelector(nodeSelector map[string]string) (string, error) {
+	value, errJson := labelsToJSONString(nodeSelector)
+	if errJson != nil {
+		return "", fmt.Errorf("addNodeSelector: %v", errJson)
+	}
 	return fmt.Sprintf(`{"op":"add","path":"/spec/nodeSelector","value":%s}`,
-		labelsToJSONString(nodeSelector))
+		value), nil
 }
 
-func labelsToJSONString(v map[string]string) string {
+func labelsToJSONString(v map[string]string) (string, error) {
 	data, errLabels := json.Marshal(v)
 	if errLabels != nil {
-		log.Printf("labelsToJSONString: ERROR: %v", errLabels)
+		return "", fmt.Errorf("labelsToJSONString: input:%v error:%v", v, errLabels)
 	}
-	return string(data)
+	return string(data), nil
 }
