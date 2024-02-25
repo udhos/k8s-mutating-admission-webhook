@@ -40,11 +40,11 @@ place_pods:
     add:
       tolerations:
         - key: key1
-          operator: Exists
+          operator: Equal
           value: value1
           effect: NoSchedule
         - key: key2
-          operator: Exists
+          operator: Equal
           value: value2
           effect: NoSchedule
       node_selector:
