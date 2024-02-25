@@ -1,3 +1,16 @@
+# these fields match with regexp.
+# be careful about using them as literals,
+# since the expression "key" matches "my-key1".
+#
+# restrict_tolerations[].toleration.key
+# restrict_tolerations[].toleration.operator
+# restrict_tolerations[].toleration.value
+# restrict_tolerations[].toleration.effect
+# restrict_tolerations[].allowed_pods.namespace
+# restrict_tolerations[].allowed_pods.name
+# place_pods[].pod.namespace
+# place_pods[].pod.name
+
 restrict_tolerations:
 
   # if a toleration is unmatched, it is allowed for all PODs.
