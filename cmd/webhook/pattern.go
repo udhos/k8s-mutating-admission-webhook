@@ -11,11 +11,7 @@ type pattern struct {
 }
 
 func (p *pattern) matchString(s string) bool {
-	m := p.re.MatchString(s)
-	if p.negate {
-		return !m
-	}
-	return m
+	return p.negate != p.re.MatchString(s)
 }
 
 const patternNegatePrefix = "_"
