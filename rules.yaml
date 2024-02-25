@@ -31,3 +31,22 @@ restrict_tolerations:
       # match only POD prefixed as daemonset-
       - #namespace: ""    # empty string matches anything
         name: ^daemonset- # match prefix
+
+place_pods:
+  - pod:
+      # match only POD prefixed as coredns-
+      #namespace: ""    # empty string matches anything
+      name: ^coredns-   # match prefix
+    add:
+      tolerations:
+        - key: key1
+          operator: Exists
+          value: value1
+          effect: NoSchedule
+        - key: key2
+          operator: Exists
+          value: value2
+          effect: NoSchedule
+      node_selector:
+          key1: value1
+          key2: value2

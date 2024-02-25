@@ -9,18 +9,16 @@ import (
 
 type rulesConfig struct {
 	RestrictTolerations []restrictTolerationConfig `yaml:"restrict_tolerations"`
+	PlacePods           []placementConfig          `yaml:"place_pods"`
 }
 
 type restrictTolerationConfig struct {
-	Toleration  tolerationConfig `yaml:"toleration"`
-	AllowedPods []podConfig      `yaml:"allowed_pods"`
+	Toleration  tolerationConfigPattern `yaml:"toleration"`
+	AllowedPods []podConfig             `yaml:"allowed_pods"`
 }
 
-type tolerationConfig struct {
-	Key      string `yaml:"key"`
-	Operator string `yaml:"operator"`
-	Value    string `yaml:"value"`
-	Effect   string `yaml:"effect"`
+type tolerationConfigPattern struct {
+	tolerationConfig `yaml:",inline"`
 
 	key      *pattern
 	operator *pattern
@@ -36,7 +34,24 @@ type podConfig struct {
 	name      *pattern
 }
 
-func (t *tolerationConfig) match(podToleration corev1.Toleration) bool {
+type placementConfig struct {
+	Pod podConfig `yaml:"pod"`
+	Add addConfig `yaml:"add"`
+}
+
+type addConfig struct {
+	Tolerations  []tolerationConfig `yaml:"tolerations"`
+	NodeSelector map[string]string  `yaml:"node_selector"`
+}
+
+type tolerationConfig struct {
+	Key      string `yaml:"key"`
+	Operator string `yaml:"operator"`
+	Value    string `yaml:"value"`
+	Effect   string `yaml:"effect"`
+}
+
+func (t *tolerationConfigPattern) match(podToleration corev1.Toleration) bool {
 	return t.key.matchString(podToleration.Key) &&
 		t.operator.matchString(string(podToleration.Operator)) &&
 		t.value.matchString(podToleration.Value) &&
@@ -115,6 +130,26 @@ func newRules(data []byte) (rulesConfig, error) {
 			}
 
 		}
+	}
+
+	for i := range r.PlacePods {
+
+		{
+			ns, errNs := patternCompile(r.PlacePods[i].Pod.Namespace)
+			if errNs != nil {
+				return r, errNs
+			}
+			r.PlacePods[i].Pod.namespace = ns
+		}
+
+		{
+			name, errName := patternCompile(r.PlacePods[i].Pod.Name)
+			if errName != nil {
+				return r, errName
+			}
+			r.PlacePods[i].Pod.name = name
+		}
+
 	}
 
 	return r, nil
