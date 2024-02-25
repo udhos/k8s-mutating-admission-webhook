@@ -132,7 +132,17 @@ configDir:
           - #namespace: ""    # empty string matches anything
             name: ^daemonset- # match prefix
     
+    # if the pod matches multiple place_pods rules,
+    # it will receive tolerations and node_selectors
+    # from ALL matches.
+
     place_pods:
+      - pod:
+          labels:
+            color: red
+        add:
+          node_selector:
+            node: alpha
       - pod:
           # match only POD prefixed as coredns-
           #namespace: ""    # empty string matches anything
@@ -148,5 +158,5 @@ configDir:
               value: value2
               effect: NoSchedule
           node_selector:
-              key1: value1
-              key2: value2
+            key1: value1
+            key2: value2
