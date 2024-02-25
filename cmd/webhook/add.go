@@ -7,10 +7,12 @@ import (
 )
 
 func addPlacement(namespace string, podName string, podLabels map[string]string, placePods []placementConfig) []string {
+
 	//
 	// scan pod add rules
 	//
 	for _, pc := range placePods {
+
 		if pc.match(namespace, podName, podLabels) {
 			//
 			// found add rule for pod
@@ -30,13 +32,14 @@ func addOne(add addConfig) []string {
 		list = append(list, addToleration(tol))
 	}
 
-	ns, errNs := addNodeSelector(add.NodeSelector)
-	if errNs != nil {
-		log.Printf("ERROR: addOne: %v", errNs)
-		return list
+	if len(add.NodeSelector) > 0 {
+		ns, errNs := addNodeSelector(add.NodeSelector)
+		if errNs != nil {
+			log.Printf("ERROR: addOne: %v", errNs)
+			return list
+		}
+		list = append(list, ns)
 	}
-
-	list = append(list, ns)
 
 	return list
 }
@@ -47,6 +50,7 @@ func addToleration(tol tolerationConfig) string {
 }
 
 func addNodeSelector(nodeSelector map[string]string) (string, error) {
+
 	value, errJSON := labelsToJSONString(nodeSelector)
 	if errJSON != nil {
 		return "", fmt.Errorf("addNodeSelector: %v", errJSON)

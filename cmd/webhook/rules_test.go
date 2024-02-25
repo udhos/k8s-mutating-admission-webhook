@@ -47,3 +47,35 @@ func TestLabels(t *testing.T) {
 		}
 	}
 }
+
+func TestRulesPlacePods(t *testing.T) {
+
+	const input = `
+place_pods:
+  - pods:
+      - namespace: ""
+    add:
+      node_selector:
+        node: alpha
+`
+
+	r, errInput := newRules([]byte(input))
+	if errInput != nil {
+		t.Errorf("input: %v", errInput)
+	}
+
+	if len(r.PlacePods) != 1 {
+		t.Errorf("bad number of place pods rules (should be 1): %d",
+			len(r.PlacePods))
+	}
+
+	if len(r.PlacePods[0].Pods) != 1 {
+		t.Errorf("bad number of place pods match rules (should be 1): %d",
+			len(r.PlacePods[0].Pods))
+	}
+
+	if len(r.PlacePods[0].Add.NodeSelector) != 1 {
+		t.Errorf("bad number of node selector labels (should be 1): %d",
+			len(r.PlacePods[0].Add.NodeSelector))
+	}
+}
