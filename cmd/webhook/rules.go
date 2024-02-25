@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"regexp"
 
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
@@ -23,29 +22,29 @@ type tolerationConfig struct {
 	Value    string `yaml:"value"`
 	Effect   string `yaml:"effect"`
 
-	key      *regexp.Regexp
-	operator *regexp.Regexp
-	value    *regexp.Regexp
-	effect   *regexp.Regexp
+	key      *pattern
+	operator *pattern
+	value    *pattern
+	effect   *pattern
 }
 
 type podConfig struct {
 	Namespace string `yaml:"namespace"`
 	Name      string `yaml:"name"`
 
-	namespace *regexp.Regexp
-	name      *regexp.Regexp
+	namespace *pattern
+	name      *pattern
 }
 
 func (t *tolerationConfig) match(podToleration corev1.Toleration) bool {
-	return t.key.MatchString(podToleration.Key) &&
-		t.operator.MatchString(string(podToleration.Operator)) &&
-		t.value.MatchString(podToleration.Value) &&
-		t.effect.MatchString(string(podToleration.Effect))
+	return t.key.matchString(podToleration.Key) &&
+		t.operator.matchString(string(podToleration.Operator)) &&
+		t.value.matchString(podToleration.Value) &&
+		t.effect.matchString(string(podToleration.Effect))
 }
 
 func (p *podConfig) match(namespace, podName string) bool {
-	return p.namespace.MatchString(namespace) && p.name.MatchString(podName)
+	return p.namespace.matchString(namespace) && p.name.matchString(podName)
 }
 
 func loadRules(path string) (rulesConfig, error) {
@@ -66,7 +65,7 @@ func newRules(data []byte) (rulesConfig, error) {
 	for i := range r.RestrictTolerations {
 
 		{
-			key, errKey := regexp.Compile(r.RestrictTolerations[i].Toleration.Key)
+			key, errKey := patternCompile(r.RestrictTolerations[i].Toleration.Key)
 			if errKey != nil {
 				return r, errKey
 			}
@@ -74,7 +73,7 @@ func newRules(data []byte) (rulesConfig, error) {
 		}
 
 		{
-			op, errOp := regexp.Compile(r.RestrictTolerations[i].Toleration.Operator)
+			op, errOp := patternCompile(r.RestrictTolerations[i].Toleration.Operator)
 			if errOp != nil {
 				return r, errOp
 			}
@@ -82,7 +81,7 @@ func newRules(data []byte) (rulesConfig, error) {
 		}
 
 		{
-			v, errV := regexp.Compile(r.RestrictTolerations[i].Toleration.Value)
+			v, errV := patternCompile(r.RestrictTolerations[i].Toleration.Value)
 			if errV != nil {
 				return r, errV
 			}
@@ -90,7 +89,7 @@ func newRules(data []byte) (rulesConfig, error) {
 		}
 
 		{
-			eff, errEff := regexp.Compile(r.RestrictTolerations[i].Toleration.Effect)
+			eff, errEff := patternCompile(r.RestrictTolerations[i].Toleration.Effect)
 			if errEff != nil {
 				return r, errEff
 			}
@@ -100,7 +99,7 @@ func newRules(data []byte) (rulesConfig, error) {
 		for j := range r.RestrictTolerations[i].AllowedPods {
 
 			{
-				ns, errNs := regexp.Compile(r.RestrictTolerations[i].AllowedPods[j].Namespace)
+				ns, errNs := patternCompile(r.RestrictTolerations[i].AllowedPods[j].Namespace)
 				if errNs != nil {
 					return r, errNs
 				}
@@ -108,7 +107,7 @@ func newRules(data []byte) (rulesConfig, error) {
 			}
 
 			{
-				name, errName := regexp.Compile(r.RestrictTolerations[i].AllowedPods[j].Name)
+				name, errName := patternCompile(r.RestrictTolerations[i].AllowedPods[j].Name)
 				if errName != nil {
 					return r, errName
 				}

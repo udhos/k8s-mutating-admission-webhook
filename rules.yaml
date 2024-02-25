@@ -1,29 +1,33 @@
 restrict_tolerations:
 
-  # if a toleration is unmatched, it is allowed for all PODs
+  # if a toleration is unmatched, it is allowed for all PODs.
+  # if a toleration is matched, only matched PODs can have it.
   #
-  # if a toleration is matched, only matched PODs can have it
+  # the empty expression matches anything.
+  # the underscore (_) in the beginning of the expression negates it.
+  # "" matches anything.
+  # "_" negates the empty string, hence it matches nothing.
 
   # remove key1 from any pod
   - toleration:
-      # match key1 regardless of other fields
-      key: "^key2$"
-      operator: ".*"
-      value: ".*"
-      effect: ".*"
+      # exactly match key1 regardless of other fields
+      key: ^key1$    # exact match
+      #operator: ""  # empty string matches anything
+      #value: ""     # empty string matches anything
+      #effect: ""    # empty string matches anything
     allowed_pods:
       # match NO pod
-      - namespace: "^$"
-        name: "^$"
+      - namespace: _ # negated empty string matches nothing
+        name: _      # negated empty string matches nothing
 
   # remove exactly Exists from all pods except pods prefixed with "^daemonset-"
   - toleration:
       # match exactly Exists
-      key: "^$"
-      operator: "^Exists$"
-      value: "^$"
-      effect: "^$"
+      key: ^$             # match only the empty string
+      operator: ^Exists$  # exact match
+      value: ^$           # match only the empty string
+      effect: ^$          # match only the empty string
     allowed_pods:
       # match only POD prefixed as daemonset-
-      - namespace: ".*"
-        name: "^daemonset-"
+      - #namespace: ""    # empty string matches anything
+        name: ^daemonset- # match prefix

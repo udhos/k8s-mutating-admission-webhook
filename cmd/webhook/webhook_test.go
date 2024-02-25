@@ -39,60 +39,60 @@ const tolerationsExists = `[
 const rulesRejectKey2 = `
 restrict_tolerations:
     - toleration:
-        # match key1
-        key: "^key2$"
-        operator: ".*"
-        value: ".*"
-        effect: ".*"
+        # match key2
+        key: ^key2$
+        #operator: ""  # empty string matches anything
+        #value: ""     # empty string matches anything
+        #effect: ""    # empty string matches anything
       allowed_pods:
         # match NO pod
-        - namespace: "^$"
-          name: "^$"
+        - namespace: _ # negated empty string matches nothing
+          name: _      # negated empty string matches nothing
 `
 
 const rulesRejectAll = `
 restrict_tolerations:
   - toleration:
       # match any toleration
-      key: ".*"
-      operator: ".*"
-      value: ".*"
-      effect: ".*"
+      #key: ""        # empty string matches anything
+      #operator: ""   # empty string matches anything
+      #value: ""      # empty string matches anything
+      #effect: ""     # empty string matches anything
     allowed_pods:
       # match NO pod
-      - namespace: "^$"
-        name: "^$"
+      - namespace: _  # negated empty string matches nothing
+        name: _       # negated empty string matches nothing
 `
 
 const rulesRejectOnlyExists = `
 restrict_tolerations:
   - toleration:
       # match only Exists
-      key: "^$"
-      operator: "^Exists$"
-      value: "^$"
-      effect: "^$"
+      key: ^$               # match only the empty string
+      operator: ^Exists$
+      value: ^$             # match only the empty string
+      effect: ^$            # match only the empty string
     allowed_pods:
       # match NO pod
-      - namespace: "^$"
-        name: "^$"
+      - namespace: _        # negated empty string matches nothing
+        name: _             # negated empty string matches nothing
 `
 
 const rulesOnlyPodDaemonSetCanHaveExactlyExists = `
 restrict_tolerations:
   - toleration:
-      # match exactly Exists
-      key: "^$"
-      operator: "^Exists$"
-      value: "^$"
-      effect: "^$"
+      # match only Exists
+      key: ^$               # match only the empty string
+      operator: ^Exists$
+      value: ^$             # match only the empty string
+      effect: ^$            # match only the empty string
     allowed_pods:
       # this first rule does nothing, it serves only to test multiple pod rules
-      - namespace: "^$"
-        name: "^$"
+      - namespace: _        # negated empty string matches nothing
+        name: _             # negated empty string matches nothing
       # match only POD prefixed as daemonset-
-      - namespace: ".*"
-        name: "^daemonset-"
+      - #namespace: ""      # empty string matches anything
+        name: ^daemonset-   # match prefix
 `
 
 var tolerationTestTable = []tolerationTestCase{
@@ -134,6 +134,14 @@ var tolerationTestTable = []tolerationTestCase{
 		podTolerations:  tolerations3,
 		namespace:       "default",
 		podName:         "pod-1",
+		expectedIndices: "[1]",
+	},
+	{
+		testName:        "rule rejects key2, three toleration",
+		rules:           rulesRejectKey2,
+		podTolerations:  tolerations3,
+		namespace:       "default",
+		podName:         "!",
 		expectedIndices: "[1]",
 	},
 	{
