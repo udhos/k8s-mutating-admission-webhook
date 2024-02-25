@@ -74,6 +74,10 @@ tolerations: []
 
 affinity: {}
 
+# ACCEPT_NODE_SELECTORS: list accepted node selector keys.
+# restrict_tolerations: for every toleration pattern, define PODs which can use it.
+# place_pods: for every POD pattern, adds tolerations and node selectors.
+
 #
 # See: https://stackoverflow.com/questions/72816925/helm-templating-in-configmap-for-values-yaml
 #
