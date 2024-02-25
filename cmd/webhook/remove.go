@@ -7,10 +7,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func removeTolerations(namespace, podName string, podTolerations []corev1.Toleration,
+func removeTolerations(namespace, podName string, podLabels map[string]string, podTolerations []corev1.Toleration,
 	restrictToleration []restrictTolerationConfig) []string {
 
-	toRemove := removeTolerationsIndices(namespace, podName, podTolerations,
+	toRemove := removeTolerationsIndices(namespace, podName, podLabels, podTolerations,
 		restrictToleration)
 
 	// build patch list removing all tolerations by index
@@ -21,7 +21,7 @@ func removeTolerations(namespace, podName string, podTolerations []corev1.Tolera
 	return list
 }
 
-func removeTolerationsIndices(namespace, podName string, podTolerations []corev1.Toleration,
+func removeTolerationsIndices(namespace, podName string, podLabels map[string]string, podTolerations []corev1.Toleration,
 	restrictToleration []restrictTolerationConfig) []int {
 
 	var toRemove []int // list of tolerations index to remove
@@ -49,7 +49,7 @@ func removeTolerationsIndices(namespace, podName string, podTolerations []corev1
 			var isAllowed bool
 			podRule := -1
 			for k, allowedPod := range rt.AllowedPods {
-				if allowedPod.match(namespace, podName) {
+				if allowedPod.match(namespace, podName, podLabels) {
 					isAllowed = true
 					podRule = k
 					break

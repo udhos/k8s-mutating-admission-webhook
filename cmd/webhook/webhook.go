@@ -88,11 +88,11 @@ func handlerWebhook(app *application, w http.ResponseWriter, r *http.Request) {
 	} else {
 
 		// remove tolerations and nodeSelector
-		tolerationRemovalList := removeTolerations(namespace, podName, pod.Spec.Tolerations, app.rules.RestrictTolerations)
+		tolerationRemovalList := removeTolerations(namespace, podName, pod.ObjectMeta.Labels, pod.Spec.Tolerations, app.rules.RestrictTolerations)
 		nodeSelectorRemovalList := removeNodeSelectors(namespace, podName, pod.Spec.NodeSelector, app.conf.acceptNodeSelectors)
 
 		// add tolerations and nodeSelector
-		placementList := addPlacement(namespace, podName, app.rules.PlacePods)
+		placementList := addPlacement(namespace, podName, pod.ObjectMeta.Labels, app.rules.PlacePods)
 
 		patchList := append(tolerationRemovalList, nodeSelectorRemovalList...)
 		patchList = append(patchList, placementList...)

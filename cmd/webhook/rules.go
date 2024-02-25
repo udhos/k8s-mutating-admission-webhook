@@ -27,8 +27,9 @@ type tolerationConfigPattern struct {
 }
 
 type podConfig struct {
-	Namespace string `yaml:"namespace"`
-	Name      string `yaml:"name"`
+	Namespace string            `yaml:"namespace"`
+	Name      string            `yaml:"name"`
+	Labels    map[string]string `yaml:"labels"`
 
 	namespace *pattern
 	name      *pattern
@@ -58,8 +59,17 @@ func (t *tolerationConfigPattern) match(podToleration corev1.Toleration) bool {
 		t.effect.matchString(string(podToleration.Effect))
 }
 
-func (p *podConfig) match(namespace, podName string) bool {
-	return p.namespace.matchString(namespace) && p.name.matchString(podName)
+func (p *podConfig) match(namespace, podName string, podLabels map[string]string) bool {
+	return p.namespace.matchString(namespace) && p.name.matchString(podName) && hasLabels(podLabels, p.Labels)
+}
+
+func hasLabels(existingLabels, requiredLabels map[string]string) bool {
+	for rk, rv := range requiredLabels {
+		if ev, found := existingLabels[rk]; !found || ev != rv {
+			return false
+		}
+	}
+	return true
 }
 
 func loadRules(path string) (rulesConfig, error) {

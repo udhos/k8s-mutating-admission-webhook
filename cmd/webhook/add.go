@@ -6,14 +6,14 @@ import (
 	"log"
 )
 
-func addPlacement(namespace string, podName string, placePods []placementConfig) []string {
+func addPlacement(namespace string, podName string, podLabels map[string]string, placePods []placementConfig) []string {
 	var list []string
 
 	//
 	// scan pod add rules
 	//
 	for _, pc := range placePods {
-		if pc.Pod.match(namespace, podName) {
+		if pc.Pod.match(namespace, podName, podLabels) {
 			//
 			// found add rule for pod
 			//
@@ -49,9 +49,9 @@ func addToleration(tol tolerationConfig) string {
 }
 
 func addNodeSelector(nodeSelector map[string]string) (string, error) {
-	value, errJson := labelsToJSONString(nodeSelector)
-	if errJson != nil {
-		return "", fmt.Errorf("addNodeSelector: %v", errJson)
+	value, errJSON := labelsToJSONString(nodeSelector)
+	if errJSON != nil {
+		return "", fmt.Errorf("addNodeSelector: %v", errJSON)
 	}
 	return fmt.Sprintf(`{"op":"add","path":"/spec/nodeSelector","value":%s}`,
 		value), nil

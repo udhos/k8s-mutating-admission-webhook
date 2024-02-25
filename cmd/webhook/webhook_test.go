@@ -16,6 +16,7 @@ type tolerationTestCase struct {
 	podTolerations  string
 	namespace       string
 	podName         string
+	podLabels       string
 	expectedIndices string
 }
 
@@ -95,6 +96,20 @@ restrict_tolerations:
         name: ^daemonset-   # match prefix
 `
 
+const rulesPodLabelCanHaveKey2 = `
+restrict_tolerations:
+    - toleration:
+        # match key2
+        key: ^key2$
+        #operator: ""  # empty string matches anything
+        #value: ""     # empty string matches anything
+        #effect: ""    # empty string matches anything
+      allowed_pods:
+        # match pods with label good=pod
+        - labels:
+            good: pod
+`
+
 var tolerationTestTable = []tolerationTestCase{
 	{
 		testName:        "empty rule, empty toleration",
@@ -168,9 +183,44 @@ var tolerationTestTable = []tolerationTestCase{
 		podName:         "daemonset-1",
 		expectedIndices: "[]",
 	},
+	{
+		testName:        "only key3 is restricted, pod label allows it",
+		rules:           rulesPodLabelCanHaveKey2,
+		podTolerations:  tolerations3,
+		namespace:       "default",
+		podName:         "pod-good-1",
+		podLabels:       `{"good":"pod"}`,
+		expectedIndices: "[]",
+	},
+	{
+		testName:        "only key3 is restricted, pod has not label",
+		rules:           rulesPodLabelCanHaveKey2,
+		podTolerations:  tolerations3,
+		namespace:       "default",
+		podName:         "pod-good-1",
+		expectedIndices: "[1]",
+	},
+	{
+		testName:        "only key3 is restricted, pod label wrong",
+		rules:           rulesPodLabelCanHaveKey2,
+		podTolerations:  tolerations3,
+		namespace:       "default",
+		podName:         "pod-good-1",
+		podLabels:       `{"bad":"news"}`,
+		expectedIndices: "[1]",
+	},
+	{
+		testName:        "only key3 is restricted, pod label wrong value",
+		rules:           rulesPodLabelCanHaveKey2,
+		podTolerations:  tolerations3,
+		namespace:       "default",
+		podName:         "pod-good-1",
+		podLabels:       `{"good":"POD"}`,
+		expectedIndices: "[1]",
+	},
 }
 
-func TestTolerationRules(t *testing.T) {
+func TestRestrictTolerations(t *testing.T) {
 
 	for i, data := range tolerationTestTable {
 		testLabel := fmt.Sprintf("%d: %s:", i, data.testName)
@@ -186,14 +236,22 @@ func TestTolerationRules(t *testing.T) {
 			t.Errorf("%s bad pod tolerations: %v", testLabel, errTol)
 		}
 
-		//t.Logf("%s rules=%v podTolerations=%v", testLabel, r, podTolerations)
+		var podLabels map[string]string
+		if data.podLabels != "" {
+			errLab := json.Unmarshal([]byte(data.podLabels), &podLabels)
+			if errLab != nil {
+				t.Errorf("%s bad pod labels: %v", testLabel, errLab)
+			}
+		}
 
-		list := removeTolerationsIndices(data.namespace, data.podName, podTolerations, r.RestrictTolerations)
+		list := removeTolerationsIndices(data.namespace, data.podName,
+			podLabels, podTolerations, r.RestrictTolerations)
 
 		str := fmt.Sprintf("%v", list)
 
 		if str != data.expectedIndices {
-			t.Errorf("%s bad removal indices: got=%s expected=%s", testLabel, str, data.expectedIndices)
+			t.Errorf("%s bad removal indices: got=%s expected=%s",
+				testLabel, str, data.expectedIndices)
 		}
 	}
 }
