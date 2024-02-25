@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 )
 
 func addPlacement(namespace string, podName string, placePods []placementConfig) []string {
@@ -37,7 +38,7 @@ func addOne(add addConfig) []string {
 }
 
 func addToleration(tol tolerationConfig) string {
-	return fmt.Sprintf(`{"op":"add","path":"/spec/tolerations/-","value":{"key":"%s","operator":"%s","effect":"%s","value":"%s"}`,
+	return fmt.Sprintf(`{"op":"add","path":"/spec/tolerations/-","value":{"key":"%s","operator":"%s","effect":"%s","value":"%s"}}`,
 		tol.Key, tol.Operator, tol.Effect, tol.Value)
 }
 
@@ -47,6 +48,9 @@ func addNodeSelector(nodeSelector map[string]string) string {
 }
 
 func labelsToJSONString(v map[string]string) string {
-	data, _ := json.Marshal(v)
+	data, errLabels := json.Marshal(v)
+	if errLabels != nil {
+		log.Printf("labelsToJSONString: ERROR: %v", errLabels)
+	}
 	return string(data)
 }
