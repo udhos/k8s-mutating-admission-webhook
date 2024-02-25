@@ -47,19 +47,22 @@ restrict_tolerations:
 
 # if the pod matches multiple place_pods rules,
 # it will receive tolerations and node_selectors
-# from ALL matches.
+# only from the FIRST matching rule.
 
 place_pods:
-  - pod:
-      labels:
-        color: red
+  - pods:
+      - labels:
+          color: red
+      - namespace: ^default$
+        labels:
+          color: blue
     add:
       node_selector:
         node: alpha
-  - pod:
-      # match only POD prefixed as coredns-
-      #namespace: ""    # empty string matches anything
-      name: ^coredns-   # match prefix
+  - pods:
+      - # match only POD prefixed as coredns-
+        #namespace: ""    # empty string matches anything
+        name: ^coredns-   # match prefix
     add:
       tolerations:
         - key: key1

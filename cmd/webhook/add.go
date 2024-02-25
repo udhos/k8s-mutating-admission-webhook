@@ -7,21 +7,19 @@ import (
 )
 
 func addPlacement(namespace string, podName string, podLabels map[string]string, placePods []placementConfig) []string {
-	var list []string
-
 	//
 	// scan pod add rules
 	//
 	for _, pc := range placePods {
-		if pc.Pod.match(namespace, podName, podLabels) {
+		if pc.match(namespace, podName, podLabels) {
 			//
 			// found add rule for pod
 			//
-			list = append(list, addOne(pc.Add)...)
+			return addOne(pc.Add)
 		}
 	}
 
-	return list
+	return nil
 }
 
 func addOne(add addConfig) []string {

@@ -36,8 +36,8 @@ type podConfig struct {
 }
 
 type placementConfig struct {
-	Pod podConfig `yaml:"pod"`
-	Add addConfig `yaml:"add"`
+	Pods []podConfig `yaml:"pods"`
+	Add  addConfig   `yaml:"add"`
 }
 
 type addConfig struct {
@@ -57,6 +57,15 @@ func (t *tolerationConfigPattern) match(podToleration corev1.Toleration) bool {
 		t.operator.matchString(string(podToleration.Operator)) &&
 		t.value.matchString(podToleration.Value) &&
 		t.effect.matchString(string(podToleration.Effect))
+}
+
+func (pc *placementConfig) match(namespace, podName string, podLabels map[string]string) bool {
+	for _, podC := range pc.Pods {
+		if podC.match(namespace, podName, podLabels) {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *podConfig) match(namespace, podName string, podLabels map[string]string) bool {
@@ -144,20 +153,18 @@ func newRules(data []byte) (rulesConfig, error) {
 
 	for i := range r.PlacePods {
 
-		{
-			ns, errNs := patternCompile(r.PlacePods[i].Pod.Namespace)
+		for j := range r.PlacePods[i].Pods {
+			ns, errNs := patternCompile(r.PlacePods[i].Pods[j].Namespace)
 			if errNs != nil {
 				return r, errNs
 			}
-			r.PlacePods[i].Pod.namespace = ns
-		}
+			r.PlacePods[i].Pods[j].namespace = ns
 
-		{
-			name, errName := patternCompile(r.PlacePods[i].Pod.Name)
+			name, errName := patternCompile(r.PlacePods[i].Pods[j].Name)
 			if errName != nil {
 				return r, errName
 			}
-			r.PlacePods[i].Pod.name = name
+			r.PlacePods[i].Pods[j].name = name
 		}
 
 	}
