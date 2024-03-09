@@ -3,18 +3,13 @@ package main
 import (
 	"bytes"
 	"context"
-	"errors"
 	"log"
-	"os"
-	"path/filepath"
 	"reflect"
 
+	"github.com/udhos/kube/kubeclient"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConfigName,
@@ -23,33 +18,12 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConf
 
 	log.Println("Initializing the kube client...")
 
-	kubeconfig := os.Getenv("KUBECONFIG")
-	if kubeconfig == "" {
-		home, errHome := os.UserHomeDir()
-		if errHome != nil {
-			log.Printf("Could not get home dir: %v", errHome)
-		}
-		kubeconfig = filepath.Join(home, "/.kube/config")
+	options := kubeclient.Options{
+		DebugLog: true,
 	}
-
-	config, errKubeconfig := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if errKubeconfig != nil {
-		log.Printf("kubeconfig: %v", errKubeconfig)
-
-		c, errInCluster := rest.InClusterConfig()
-		if errInCluster != nil {
-			log.Printf("in-cluster-config: %v", errInCluster)
-		}
-		config = c
-	}
-
-	if config == nil {
-		return errors.New("could not get cluster config")
-	}
-
-	clientset, errConfig := kubernetes.NewForConfig(config)
-	if errConfig != nil {
-		return errConfig
+	clientset, errClient := kubeclient.New(options)
+	if errClient != nil {
+		return errClient
 	}
 
 	mutatingWebhookConfigV1Client := clientset.AdmissionregistrationV1()

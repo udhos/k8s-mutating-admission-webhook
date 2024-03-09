@@ -82,6 +82,7 @@ affinity: {}
 # See: https://stackoverflow.com/questions/72816925/helm-templating-in-configmap-for-values-yaml
 #
 configMapProperties:
+  AUTOMEMLIMIT_DEBUG: "true"
   DEBUG: "true"
   RULES: /etc/webhook/rules.yaml
   #ADDR: ":8443"
