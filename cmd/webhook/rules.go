@@ -31,6 +31,8 @@ type podConfig struct {
 	Name      string            `yaml:"name"`
 	Labels    map[string]string `yaml:"labels"`
 
+	And []podConfig `yaml:"and"`
+
 	namespace *pattern
 	name      *pattern
 }
@@ -69,6 +71,15 @@ func (pc *placementConfig) match(namespace, podName string, podLabels map[string
 }
 
 func (p *podConfig) match(namespace, podName string, podLabels map[string]string) bool {
+
+	if len(p.And) > 0 {
+		for _, sub := range p.And {
+			if !sub.match(namespace, podName, podLabels) {
+				return false
+			}
+		}
+	}
+
 	return p.namespace.matchString(namespace) && p.name.matchString(podName) && hasLabels(podLabels, p.Labels)
 }
 
@@ -148,6 +159,12 @@ func newRules(data []byte) (rulesConfig, error) {
 				r.RestrictTolerations[i].AllowedPods[j].name = name
 			}
 
+			and, errAnd := compileAnd(r.RestrictTolerations[i].AllowedPods[j].And)
+			if errAnd != nil {
+				return r, errAnd
+			}
+
+			r.RestrictTolerations[i].AllowedPods[j].And = and
 		}
 	}
 
@@ -170,4 +187,34 @@ func newRules(data []byte) (rulesConfig, error) {
 	}
 
 	return r, nil
+}
+
+func compileAnd(list []podConfig) ([]podConfig, error) {
+	for i, p := range list {
+
+		{
+			ns, errNs := patternCompile(p.Namespace)
+			if errNs != nil {
+				return list, errNs
+			}
+			list[i].namespace = ns
+		}
+
+		{
+			name, errName := patternCompile(p.Name)
+			if errName != nil {
+				return list, errName
+			}
+			list[i].name = name
+		}
+
+		and, errAnd := compileAnd(p.And)
+		if errAnd != nil {
+			return list, errAnd
+		}
+
+		list[i].And = and
+	}
+
+	return list, nil
 }

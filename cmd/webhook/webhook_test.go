@@ -96,6 +96,27 @@ restrict_tolerations:
         name: ^daemonset-   # match prefix
 `
 
+const rulesOnlyPodDaemonSetCanHaveExactlyExistsWithAnd = `
+restrict_tolerations:
+  - toleration:
+      # match only Exists
+      key: ^$               # match only the empty string
+      operator: ^Exists$
+      value: ^$             # match only the empty string
+      effect: ^$            # match only the empty string
+    allowed_pods:
+      # this first rule does nothing, it serves only to test multiple pod rules
+      - namespace: _        # negated empty string matches nothing
+        name: _             # negated empty string matches nothing
+      - and:
+        # match only POD prefixed as datadog-
+        - #namespace: ""           # empty string matches anything
+            name: ^datadog-        # match prefix
+        # AND NOT prefixed as datadog-agent-
+        - #namespace: ""           # empty string matches anything
+            name: _^datadog-agent  # reject prefix
+`
+
 const rulesPodLabelCanHaveKey2 = `
 restrict_tolerations:
     - toleration:
@@ -182,6 +203,22 @@ var tolerationTestTable = []tolerationTestCase{
 		namespace:       "default",
 		podName:         "daemonset-1",
 		expectedIndices: "[]",
+	},
+	{
+		testName:        "accept Exists for datadog- prefixed pod",
+		rules:           rulesOnlyPodDaemonSetCanHaveExactlyExistsWithAnd,
+		podTolerations:  tolerationsExists,
+		namespace:       "datadog",
+		podName:         "datadog-",
+		expectedIndices: "[]",
+	},
+	{
+		testName:        "reject Exists for datadog-agent- prefixed pod",
+		rules:           rulesOnlyPodDaemonSetCanHaveExactlyExistsWithAnd,
+		podTolerations:  tolerationsExists,
+		namespace:       "datadog",
+		podName:         "datadog-agent-",
+		expectedIndices: "[1]",
 	},
 	{
 		testName:        "only key3 is restricted, pod label allows it",
