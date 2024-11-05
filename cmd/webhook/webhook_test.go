@@ -110,11 +110,11 @@ restrict_tolerations:
         name: _             # negated empty string matches nothing
       - and:
         # match only POD prefixed as datadog-
-        - #namespace: ""           # empty string matches anything
-            name: ^datadog-        # match prefix
+        - namespace: ^datadog$    # empty string matches anything
+          name: ^datadog-         # match prefix
         # AND NOT prefixed as datadog-agent-
-        - #namespace: ""           # empty string matches anything
-            name: _^datadog-agent  # reject prefix
+        - namespace: ^datadog$    # empty string matches anything
+          name: _^datadog-agent-  # reject prefix
 `
 
 const rulesPodLabelCanHaveKey2 = `
