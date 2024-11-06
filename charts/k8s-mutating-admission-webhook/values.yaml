@@ -181,3 +181,20 @@ configDir:
           node_selector:
             key1: value1
             key2: value2
+
+    resources:
+      - pod:
+          namespace: "" # match anything
+          name: "" # match anything
+          #labels:
+          #  a: b
+        container: "" # match anything
+        memory:
+          requests: 11M
+          limits:   22M
+        cpu:
+          requests: 55m
+          limits:   111m
+        ephemeral-storage:
+          requests: 222M
+          limits:   333M

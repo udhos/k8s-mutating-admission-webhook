@@ -10,6 +10,22 @@ import (
 type rulesConfig struct {
 	RestrictTolerations []restrictTolerationConfig `yaml:"restrict_tolerations"`
 	PlacePods           []placementConfig          `yaml:"place_pods"`
+	Resources           []setResource              `yaml:"resources"`
+}
+
+type setResource struct {
+	Pod              podConfig `yaml:"pod"`
+	Container        string    `yaml:"container"`
+	Memory           resource  `yaml:"memory"`
+	CPU              resource  `yaml:"cpu"`
+	EphemeralStorage resource  `yaml:"ephemeral-storage"`
+
+	container *pattern
+}
+
+type resource struct {
+	Request string `yaml:"requests"`
+	Limit   string `yaml:"limits"`
 }
 
 type restrictTolerationConfig struct {
@@ -143,50 +159,73 @@ func newRules(data []byte) (rulesConfig, error) {
 
 		for j := range r.RestrictTolerations[i].AllowedPods {
 
-			{
-				ns, errNs := patternCompile(r.RestrictTolerations[i].AllowedPods[j].Namespace)
-				if errNs != nil {
-					return r, errNs
-				}
-				r.RestrictTolerations[i].AllowedPods[j].namespace = ns
+			p, errCompile := compilePod(r.RestrictTolerations[i].AllowedPods[j])
+			if errCompile != nil {
+				return r, errCompile
 			}
 
-			{
-				name, errName := patternCompile(r.RestrictTolerations[i].AllowedPods[j].Name)
-				if errName != nil {
-					return r, errName
-				}
-				r.RestrictTolerations[i].AllowedPods[j].name = name
-			}
-
-			and, errAnd := compileAnd(r.RestrictTolerations[i].AllowedPods[j].And)
-			if errAnd != nil {
-				return r, errAnd
-			}
-
-			r.RestrictTolerations[i].AllowedPods[j].And = and
+			r.RestrictTolerations[i].AllowedPods[j] = p
 		}
 	}
 
 	for i := range r.PlacePods {
 
 		for j := range r.PlacePods[i].Pods {
-			ns, errNs := patternCompile(r.PlacePods[i].Pods[j].Namespace)
-			if errNs != nil {
-				return r, errNs
-			}
-			r.PlacePods[i].Pods[j].namespace = ns
 
-			name, errName := patternCompile(r.PlacePods[i].Pods[j].Name)
-			if errName != nil {
-				return r, errName
+			p, errCompile := compilePod(r.PlacePods[i].Pods[j])
+			if errCompile != nil {
+				return r, errCompile
 			}
-			r.PlacePods[i].Pods[j].name = name
+
+			r.PlacePods[i].Pods[j] = p
 		}
 
 	}
 
+	for i := range r.Resources {
+
+		p, errCompile := compilePod(r.Resources[i].Pod)
+		if errCompile != nil {
+			return r, errCompile
+		}
+		r.Resources[i].Pod = p
+
+		c, errC := patternCompile(r.Resources[i].Container)
+		if errC != nil {
+			return r, errC
+		}
+		r.Resources[i].container = c
+	}
+
 	return r, nil
+}
+
+func compilePod(p podConfig) (podConfig, error) {
+
+	{
+		ns, errNs := patternCompile(p.Namespace)
+		if errNs != nil {
+			return p, errNs
+		}
+		p.namespace = ns
+	}
+
+	{
+		name, errName := patternCompile(p.Name)
+		if errName != nil {
+			return p, errName
+		}
+		p.name = name
+	}
+
+	and, errAnd := compileAnd(p.And)
+	if errAnd != nil {
+		return p, errAnd
+	}
+
+	p.And = and
+
+	return p, nil
 }
 
 func compileAnd(list []podConfig) ([]podConfig, error) {

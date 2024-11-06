@@ -94,8 +94,12 @@ func handlerWebhook(app *application, w http.ResponseWriter, r *http.Request) {
 		// add tolerations and nodeSelector
 		placementList := addPlacement(namespace, podName, pod.ObjectMeta.Labels, app.rules.PlacePods)
 
+		resourceList := addResource(namespace, podName, pod.ObjectMeta.Labels,
+			pod.Spec.Containers, app.rules.Resources)
+
 		patchList := append(tolerationRemovalList, nodeSelectorRemovalList...)
 		patchList = append(patchList, placementList...)
+		patchList = append(patchList, resourceList...)
 
 		if len(patchList) > 0 {
 			patch = "[" + strings.Join(patchList, ",") + "]"

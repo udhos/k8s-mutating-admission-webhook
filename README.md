@@ -165,7 +165,10 @@ kubectl label ns webhook webhook=yes
 helm template k8s-mutating-admission-webhook ./charts/k8s-mutating-admission-webhook -n webhook
 
 # install chart
-helm install k8s-mutating-admission-webhook ./charts/k8s-mutating-admission-webhook -n webhook
+helm upgrade k8s-mutating-admission-webhook ./charts/k8s-mutating-admission-webhook -n webhook --install
+
+# logs
+kubectl -n webhook logs deploy/k8s-mutating-admission-webhook -f
 ```
 
 # References
