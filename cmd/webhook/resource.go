@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -9,7 +10,8 @@ import (
 )
 
 func addResource(namespace, podName string, podLabels map[string]string,
-	containers []corev1.Container, resources []setResource) []string {
+	containers []corev1.Container, resources []setResource,
+	debug bool) []string {
 
 	const me = "addResource"
 
@@ -29,52 +31,97 @@ func addResource(namespace, podName string, podLabels map[string]string,
 			}
 			// found container
 
-			log.Printf("DEBUG %s: rule=%d/%d namespace=%s pod=%s container=%s resources=%v",
-				me, i+1, len(resources), namespace, podName, c.Name, r)
+			if debug {
+				log.Printf("DEBUG %s: rule=%d/%d namespace=%s pod=%s container=%s resources=%v",
+					me, i+1, len(resources), namespace, podName, c.Name, r)
+			}
 
-			list = generateResource(
-				c.Resources.Requests.Cpu(), i, "requests", "cpu",
-				r.CPU.Request, list)
+			origReqCPU := quantityValue(c.Resources.Requests.Cpu())
+			origReqMem := quantityValue(c.Resources.Requests.Memory())
+			origReqES := quantityValue(c.Resources.Requests.StorageEphemeral())
 
-			list = generateResource(
-				c.Resources.Limits.Cpu(), i, "limits", "cpu",
-				r.CPU.Limit, list)
+			origLimCPU := quantityValue(c.Resources.Limits.Cpu())
+			origLimMem := quantityValue(c.Resources.Limits.Memory())
+			origLimES := quantityValue(c.Resources.Limits.StorageEphemeral())
 
-			list = generateResource(
-				c.Resources.Requests.Memory(), i, "requests", "memory",
-				r.Memory.Request, list)
+			// derive request from: config req, config limit, rule
+			reqCPU := derive(origReqCPU, origLimCPU, r.CPU.Request)
+			reqMem := derive(origReqMem, origLimMem, r.Memory.Request)
+			reqES := derive(origReqES, origLimES, r.EphemeralStorage.Request)
 
-			list = generateResource(
-				c.Resources.Limits.Memory(), i, "limits", "memory",
-				r.Memory.Limit, list)
+			// derive limit from: config lim, config req, rule
+			limCPU := derive(origLimCPU, origReqCPU, r.CPU.Limit)
+			limMem := derive(origLimMem, origReqMem, r.Memory.Limit)
+			limES := derive(origLimES, origReqES, r.EphemeralStorage.Limit)
 
-			list = generateResource(
-				c.Resources.Requests.StorageEphemeral(), i,
-				"requests", "ephemeral-storage",
-				r.EphemeralStorage.Request, list)
+			requests := map[string]string{}
+			if reqCPU != "" {
+				requests["cpu"] = reqCPU
+			}
+			if reqMem != "" {
+				requests["memory"] = reqMem
+			}
+			if reqES != "" {
+				requests["ephemeral-storage"] = reqES
+			}
 
-			list = generateResource(
-				c.Resources.Limits.StorageEphemeral(), i,
-				"limits", "ephemeral-storage",
-				r.EphemeralStorage.Limit, list)
+			limits := map[string]string{}
+			if limCPU != "" {
+				limits["cpu"] = limCPU
+			}
+			if limMem != "" {
+				limits["memory"] = limMem
+			}
+			if limES != "" {
+				limits["ephemeral-storage"] = limES
+			}
+
+			log.Printf("%s: %s/%s/%s(%d): requests=%#v limits=%#v",
+				me, namespace, podName, c.Name, i, requests, limits)
+
+			req := generateResource(i, "requests", requests)
+			if req != "" {
+				list = append(list, req)
+			}
+
+			lim := generateResource(i, "limits", limits)
+			if lim != "" {
+				list = append(list, lim)
+			}
 		}
 	}
 
-	log.Printf("DEBUG %s: %v", me, list)
+	if debug {
+		log.Printf("DEBUG %s: %v", me, list)
+	}
 
 	return list
 }
 
-func generateResource(q *api_resource.Quantity, i int, reqLim, name, value string, list []string) []string {
-	if !q.IsZero() {
-		return list // already defined, do not change it
+func quantityValue(q *api_resource.Quantity) string {
+	if q.IsZero() {
+		return ""
 	}
-	if value == "" {
-		return list // rule did not define it, skip it
+	return q.String()
+}
+
+func derive(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+func generateResource(i int, reqLim string, value map[string]string) string {
+	data, errJSON := json.Marshal(value)
+	if errJSON != nil {
+		log.Printf("ERROR: generateResource: json: %v", errJSON)
+		return ""
 	}
 
-	const templ = `{"op":"add","path":"/spec/containers/%d/resources/%s","value":{"%s":"%s"}}`
-	list = append(list, fmt.Sprintf(templ, i, reqLim, name, value))
+	const templ = `{"op":"replace","path":"/spec/containers/%d/resources/%s","value":%s}`
 
-	return list
+	return fmt.Sprintf(templ, i, reqLim, string(data))
 }

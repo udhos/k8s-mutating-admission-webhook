@@ -95,7 +95,7 @@ func handlerWebhook(app *application, w http.ResponseWriter, r *http.Request) {
 		placementList := addPlacement(namespace, podName, pod.ObjectMeta.Labels, app.rules.PlacePods)
 
 		resourceList := addResource(namespace, podName, pod.ObjectMeta.Labels,
-			pod.Spec.Containers, app.rules.Resources)
+			pod.Spec.Containers, app.rules.Resources, app.conf.debug)
 
 		patchList := append(tolerationRemovalList, nodeSelectorRemovalList...)
 		patchList = append(patchList, placementList...)
