@@ -54,6 +54,21 @@ func addResource(namespace, podName string, podLabels map[string]string,
 			limMem := derive(origLimMem, origReqMem, r.Memory.Limit)
 			limES := derive(origLimES, origReqES, r.EphemeralStorage.Limit)
 
+			var changes []string
+			recordChange(&changes, reqCPU, origReqCPU, "requests", "cpu")
+			recordChange(&changes, reqMem, origReqMem, "requests", "memory")
+			recordChange(&changes, reqES, origReqES, "requests", "ephemeral-storage")
+			recordChange(&changes, limCPU, origLimCPU, "limits", "cpu")
+			recordChange(&changes, limMem, origLimMem, "limits", "memory")
+			recordChange(&changes, limES, origLimES, "limits", "ephemeral-storage")
+
+			log.Printf("%s: %s/%s/%s(%d): changes: %q",
+				me, namespace, podName, c.Name, i, changes)
+
+			if len(changes) == 0 {
+				return list
+			}
+
 			requests := map[string]string{}
 			if reqCPU != "" {
 				requests["cpu"] = reqCPU
@@ -76,8 +91,10 @@ func addResource(namespace, podName string, podLabels map[string]string,
 				limits["ephemeral-storage"] = limES
 			}
 
-			log.Printf("%s: %s/%s/%s(%d): requests=%#v limits=%#v",
-				me, namespace, podName, c.Name, i, requests, limits)
+			if debug {
+				log.Printf("DEBUG %s: %s/%s/%s(%d): setting: requests=%#v limits=%#v",
+					me, namespace, podName, c.Name, i, requests, limits)
+			}
 
 			req := generateResource(i, "requests", requests)
 			if req != "" {
@@ -96,6 +113,15 @@ func addResource(namespace, podName string, podLabels map[string]string,
 	}
 
 	return list
+}
+
+// recordChange(&changes, reqCPU, origReqCPU, "requests", "cpu")
+func recordChange(changes *[]string, value, origValue, reqLim, name string) {
+	if value == origValue {
+		return
+	}
+	*changes = append(*changes, fmt.Sprintf("%s.%s:(old='%s',new='%s')",
+		reqLim, name, origValue, value))
 }
 
 func quantityValue(q *api_resource.Quantity) string {

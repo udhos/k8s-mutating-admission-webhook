@@ -100,8 +100,8 @@ var resourceTestTable = []resourceTestCase{
 			},
 		},
 		rules:          ruleMatchAllButDontChange,
-		expectRequests: map[string]string{"cpu": "55m", "memory": "11M", "ephemeral-storage": "222M"},
-		expectLimits:   map[string]string{"cpu": "111m", "memory": "22M", "ephemeral-storage": "333M"},
+		expectRequests: nil,
+		expectLimits:   nil,
 	},
 	{
 		name:      "set all resources on resourceless pod",
@@ -140,8 +140,8 @@ var resourceTestTable = []resourceTestCase{
 			},
 		},
 		rules:          ruleSetAllResources,
-		expectRequests: map[string]string{"cpu": "855m", "memory": "811M", "ephemeral-storage": "8222M"},
-		expectLimits:   map[string]string{"cpu": "8111m", "memory": "822M", "ephemeral-storage": "8333M"},
+		expectRequests: nil,
+		expectLimits:   nil,
 	},
 	{
 		name:      "inherit limit from request",
