@@ -45,29 +45,31 @@ func addResource(namespace, podName string, podLabels map[string]string,
 			origLimES := quantityValue(c.Resources.Limits.StorageEphemeral())
 
 			// derive request from: config req, config limit, rule
-			reqCPU := derive(origReqCPU, origLimCPU, r.CPU.Request)
-			reqMem := derive(origReqMem, origLimMem, r.Memory.Request)
-			reqES := derive(origReqES, origLimES, r.EphemeralStorage.Request)
+			reqCPU, reqCPUSource := derive(origReqCPU, origLimCPU, r.CPU.Request)
+			reqMem, reqMemSource := derive(origReqMem, origLimMem, r.Memory.Request)
+			reqES, reqESSource := derive(origReqES, origLimES, r.EphemeralStorage.Request)
 
 			// derive limit from: config lim, config req, rule
-			limCPU := derive(origLimCPU, origReqCPU, r.CPU.Limit)
-			limMem := derive(origLimMem, origReqMem, r.Memory.Limit)
-			limES := derive(origLimES, origReqES, r.EphemeralStorage.Limit)
+			limCPU, limCPUSource := derive(origLimCPU, origReqCPU, r.CPU.Limit)
+			limMem, limMemSource := derive(origLimMem, origReqMem, r.Memory.Limit)
+			limES, limESSource := derive(origLimES, origReqES, r.EphemeralStorage.Limit)
 
 			var changes []string
-			recordChange(&changes, reqCPU, origReqCPU, "requests", "cpu")
-			recordChange(&changes, reqMem, origReqMem, "requests", "memory")
-			recordChange(&changes, reqES, origReqES, "requests", "ephemeral-storage")
-			recordChange(&changes, limCPU, origLimCPU, "limits", "cpu")
-			recordChange(&changes, limMem, origLimMem, "limits", "memory")
-			recordChange(&changes, limES, origLimES, "limits", "ephemeral-storage")
+			recordChange(&changes, reqCPUSource, reqCPU, origReqCPU, "requests", "cpu")
+			recordChange(&changes, reqMemSource, reqMem, origReqMem, "requests", "memory")
+			recordChange(&changes, reqESSource, reqES, origReqES, "requests", "ephemeral-storage")
+			recordChange(&changes, limCPUSource, limCPU, origLimCPU, "limits", "cpu")
+			recordChange(&changes, limMemSource, limMem, origLimMem, "limits", "memory")
+			recordChange(&changes, limESSource, limES, origLimES, "limits", "ephemeral-storage")
 
-			log.Printf("%s: %s/%s/%s(%d): changes: %q",
-				me, namespace, podName, c.Name, i, changes)
+			log.Printf("%s: %s/%s/%s(%d): changes(%d): %q",
+				me, namespace, podName, c.Name, len(changes), i, changes)
 
 			if len(changes) == 0 {
-				return list
+				continue // no change for this container
 			}
+
+			// append change patch for this container
 
 			requests := map[string]string{}
 			if reqCPU != "" {
@@ -115,13 +117,12 @@ func addResource(namespace, podName string, podLabels map[string]string,
 	return list
 }
 
-// recordChange(&changes, reqCPU, origReqCPU, "requests", "cpu")
-func recordChange(changes *[]string, value, origValue, reqLim, name string) {
+func recordChange(changes *[]string, source, value, origValue, reqLim, name string) {
 	if value == origValue {
 		return
 	}
-	*changes = append(*changes, fmt.Sprintf("%s.%s:(old='%s',new='%s')",
-		reqLim, name, origValue, value))
+	*changes = append(*changes, fmt.Sprintf("%s.%s:(old='%s',new='%s',source='%s')",
+		reqLim, name, origValue, value, source))
 }
 
 func quantityValue(q *api_resource.Quantity) string {
@@ -131,13 +132,18 @@ func quantityValue(q *api_resource.Quantity) string {
 	return q.String()
 }
 
-func derive(values ...string) string {
-	for _, v := range values {
+var deriveSource = []string{"pod-config", "req=lim", "rule"}
+
+func derive(values ...string) (string, string) {
+	for i, v := range values {
 		if v != "" {
-			return v
+			if i >= 0 && i < len(deriveSource) {
+				return v, deriveSource[i]
+			}
+			return v, "unknown"
 		}
 	}
-	return ""
+	return "", ""
 }
 
 func generateResource(i int, reqLim string, value map[string]string) string {
