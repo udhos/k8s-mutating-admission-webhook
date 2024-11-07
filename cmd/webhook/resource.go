@@ -62,8 +62,8 @@ func addResource(namespace, podName string, podLabels map[string]string,
 			recordChange(&changes, limMemSource, limMem, origLimMem, "limits", "memory")
 			recordChange(&changes, limESSource, limES, origLimES, "limits", "ephemeral-storage")
 
-			log.Printf("%s: %s/%s/%s(%d): changes(%d): %q",
-				me, namespace, podName, c.Name, len(changes), i, changes)
+			log.Printf("%s: %s/%s/%d/%s: changes(%d): %q",
+				me, namespace, podName, i, c.Name, len(changes), changes)
 
 			if len(changes) == 0 {
 				continue // no change for this container
