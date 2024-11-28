@@ -15,14 +15,15 @@ func daemonsetNodeSelector(namespace string, dsName string,
 	// scan daemonset rules
 	//
 	for _, ds := range disableDaemonsets {
-		//
-		// found rule for daemonset
-		//
 
 		if !ds.match(namespace, dsName, dsLabels) {
 			log.Printf("%s: %s/%s labels=%v: skipped", me, namespace, dsName, dsLabels)
 			continue
 		}
+
+		//
+		// found rule for daemonset
+		//
 
 		if len(ds.NodeSelector) > 0 {
 			//
@@ -41,8 +42,8 @@ func daemonsetNodeSelector(namespace string, dsName string,
 }
 
 func disable(caller, label, namespace, dsName string, dsLabels, nodeSelector map[string]string) []string {
-	log.Printf("%s: %s/%s labels=%v: disabling with nodeSelector=%v",
-		caller, namespace, dsName, dsLabels, nodeSelector)
+	log.Printf("%s: %s/%s labels=%v: disabling with %s nodeSelector=%v",
+		caller, namespace, dsName, dsLabels, label, nodeSelector)
 
 	var list []string
 	ns, errNs := addNodeSelectorOnTemplate(nodeSelector)
