@@ -182,11 +182,9 @@ func handleDaemonset(app *application, w http.ResponseWriter,
 	}
 
 	if ignore {
-		log.Printf("pod: %s/%s: ignored", namespace, dsName)
+		log.Printf("daemonset: %s/%s: ignored", namespace, dsName)
 	} else {
-
 		patchList := daemonsetNodeSelector(namespace, dsName, ds.ObjectMeta.Labels, app.rules.DisableDaemonsets)
-
 		if len(patchList) > 0 {
 			patch = "[" + strings.Join(patchList, ",") + "]"
 		}
