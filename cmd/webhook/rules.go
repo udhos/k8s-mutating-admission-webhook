@@ -11,6 +11,18 @@ type rulesConfig struct {
 	RestrictTolerations []restrictTolerationConfig `yaml:"restrict_tolerations"`
 	PlacePods           []placementConfig          `yaml:"place_pods"`
 	Resources           []setResource              `yaml:"resources"`
+	DisableDaemonsets   []selectDaemonset          `yaml:"disable_daemonsets"`
+}
+
+type selectDaemonset struct {
+	Namespace string            `yaml:"namespace"`
+	Name      string            `yaml:"name"`
+	Labels    map[string]string `yaml:"labels"`
+
+	NodeSelector map[string]string `yaml:"node_selector"`
+
+	namespace *pattern
+	name      *pattern
 }
 
 type setResource struct {
@@ -68,6 +80,10 @@ type tolerationConfig struct {
 	Operator string `yaml:"operator"`
 	Value    string `yaml:"value"`
 	Effect   string `yaml:"effect"`
+}
+
+func (s *selectDaemonset) match(namespace, dsName string, dsLabels map[string]string) bool {
+	return s.namespace.matchString(namespace) && s.name.matchString(dsName) && hasLabels(dsLabels, s.Labels)
 }
 
 func (t *tolerationConfigPattern) match(podToleration corev1.Toleration) bool {
@@ -197,6 +213,14 @@ func newRules(data []byte) (rulesConfig, error) {
 		r.Resources[i].container = c
 	}
 
+	for i := range r.DisableDaemonsets {
+		ds, errCompile := compileDaemonset(r.DisableDaemonsets[i])
+		if errCompile != nil {
+			return r, errCompile
+		}
+		r.DisableDaemonsets[i] = ds
+	}
+
 	return r, nil
 }
 
@@ -256,4 +280,25 @@ func compileAnd(list []podConfig) ([]podConfig, error) {
 	}
 
 	return list, nil
+}
+
+func compileDaemonset(ds selectDaemonset) (selectDaemonset, error) {
+
+	{
+		ns, errNs := patternCompile(ds.Namespace)
+		if errNs != nil {
+			return ds, errNs
+		}
+		ds.namespace = ns
+	}
+
+	{
+		name, errName := patternCompile(ds.Name)
+		if errName != nil {
+			return ds, errName
+		}
+		ds.name = name
+	}
+
+	return ds, nil
 }

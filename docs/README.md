@@ -35,7 +35,7 @@ To install the charts:
 
 To uninstall the charts:
 
-    helm uninstall my-k8s-mutating-admission-webhook -n webhook
+    helm uninstall k8s-mutating-admission-webhook -n webhook
 
     # also delete the webhook configuration
     kubectl delete mutatingwebhookconfiguration udhos.github.io

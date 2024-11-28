@@ -427,9 +427,9 @@ func TestAddResource(t *testing.T) {
 
 			var countFoundOp int
 
-			for dataContainerId, c := range data.containers {
+			for dataContainerID, c := range data.containers {
 
-				containerName := fmt.Sprintf("%s(%d)", c.container.Name, dataContainerId)
+				containerName := fmt.Sprintf("%s(%d)", c.container.Name, dataContainerID)
 
 				// search patch op for container
 
@@ -445,15 +445,15 @@ func TestAddResource(t *testing.T) {
 					fields := strings.SplitN(operation.Path, "/", 6)
 
 					reqLim := fields[5]
-					containerId := fields[3]
-					cId, errConv := strconv.Atoi(containerId)
+					containerID := fields[3]
+					cID, errConv := strconv.Atoi(containerID)
 					if errConv != nil {
 						t.Errorf("container=%s parse container ID from path=%s error: %d/%d: %v",
 							containerName, operation.Path, i+1, len(ops), errConv)
 						return
 					}
 
-					if cId != dataContainerId {
+					if cID != dataContainerID {
 						continue // keep searching
 					}
 

@@ -198,3 +198,9 @@ configDir:
         ephemeral-storage:
           requests: 222M
           limits:   333M
+
+    disable_daemonsets:
+      - namespace: "" # match anything
+        name: ^ds2$   # match daemonset name
+        #labels:
+        #  a: b

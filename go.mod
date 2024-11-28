@@ -1,6 +1,6 @@
 module github.com/udhos/k8s-mutating-admission-webhook
 
-go 1.23.2
+go 1.23.3
 
 require (
 	github.com/KimMachineGun/automemlimit v0.6.1

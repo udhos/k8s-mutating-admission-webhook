@@ -50,7 +50,6 @@ func addToleration(tol tolerationConfig) string {
 }
 
 func addNodeSelector(nodeSelector map[string]string) (string, error) {
-
 	value, errJSON := labelsToJSONString(nodeSelector)
 	if errJSON != nil {
 		return "", fmt.Errorf("addNodeSelector: %v", errJSON)

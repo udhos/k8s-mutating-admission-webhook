@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -44,16 +45,30 @@ func handlerWebhook(app *application, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Do server-side validation that we are only dealing with a pod resource. This
+	// Do server-side validation that we are only dealing with correct resource. This
 	// should also be part of the MutatingWebhookConfiguration in the cluster, but
 	// we should verify here before continuing.
 	podResource := metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
-	if admissionReviewRequest.Request.Resource != podResource {
-		msg := fmt.Sprintf("%s: did not receive pod, got %s",
-			me, admissionReviewRequest.Request.Resource.Resource)
-		httpError(w, msg, 400)
+	if admissionReviewRequest.Request.Resource == podResource {
+		handlePod(app, w, admissionReviewRequest, deserializer)
 		return
 	}
+
+	daemonsetResource := metav1.GroupVersionResource{Group: "apps", Version: "v1", Resource: "daemonsets"}
+	if admissionReviewRequest.Request.Resource == daemonsetResource {
+		handleDaemonset(app, w, admissionReviewRequest, deserializer)
+		return
+	}
+
+	msg := fmt.Sprintf("%s: did not receive pod or daemontset, got %s",
+		me, admissionReviewRequest.Request.Resource.Resource)
+	httpError(w, msg, 400)
+}
+
+func handlePod(app *application, w http.ResponseWriter,
+	admissionReviewRequest *admissionv1.AdmissionReview, deserializer runtime.Decoder) {
+
+	const me = "handlePod"
 
 	// Decode the pod from the AdmissionReview.
 	rawRequest := admissionReviewRequest.Request.Object.Raw
@@ -100,6 +115,77 @@ func handlerWebhook(app *application, w http.ResponseWriter, r *http.Request) {
 		patchList := append(tolerationRemovalList, nodeSelectorRemovalList...)
 		patchList = append(patchList, placementList...)
 		patchList = append(patchList, resourceList...)
+
+		if len(patchList) > 0 {
+			patch = "[" + strings.Join(patchList, ",") + "]"
+		}
+	}
+
+	if app.conf.debug {
+		log.Printf("DEBUG %s: patch: '%s'",
+			me, patch)
+	}
+
+	admissionResponse.Allowed = true
+	if patch != "" {
+		patchType := admissionv1.PatchTypeJSONPatch
+		admissionResponse.PatchType = &patchType
+		admissionResponse.Patch = []byte(patch)
+	}
+
+	// Construct the response, which is just another AdmissionReview.
+	var admissionReviewResponse admissionv1.AdmissionReview
+	admissionReviewResponse.Response = admissionResponse
+	admissionReviewResponse.SetGroupVersionKind(admissionReviewRequest.GroupVersionKind())
+	admissionReviewResponse.Response.UID = admissionReviewRequest.Request.UID
+
+	resp, errMarshal := json.Marshal(admissionReviewResponse)
+	if errMarshal != nil {
+		msg := fmt.Sprintf("%s: error marshalling response json: %v",
+			me, errMarshal)
+		httpError(w, msg, 500)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(resp)
+}
+
+func handleDaemonset(app *application, w http.ResponseWriter,
+	admissionReviewRequest *admissionv1.AdmissionReview, deserializer runtime.Decoder) {
+
+	const me = "handleDaemonset"
+
+	// Decode the daemonset from the AdmissionReview.
+	rawRequest := admissionReviewRequest.Request.Object.Raw
+	ds := appsv1.DaemonSet{}
+	if _, _, err := deserializer.Decode(rawRequest, nil, &ds); err != nil {
+		msg := fmt.Sprintf("%s: error decoding raw daemonset: %v",
+			me, err)
+		httpError(w, msg, 500)
+		return
+	}
+
+	namespace := admissionReviewRequest.Request.Namespace
+	dsName := ds.GetObjectMeta().GetName()
+
+	// Create a response.
+	admissionResponse := &admissionv1.AdmissionResponse{}
+	var patch string
+
+	var ignore bool
+	for _, ns := range app.conf.ignoreNamespaces {
+		if namespace == ns {
+			ignore = true
+			break
+		}
+	}
+
+	if ignore {
+		log.Printf("pod: %s/%s: ignored", namespace, dsName)
+	} else {
+
+		patchList := daemonsetNodeSelector(namespace, dsName, ds.ObjectMeta.Labels, app.rules.DisableDaemonsets)
 
 		if len(patchList) > 0 {
 			patch = "[" + strings.Join(patchList, ",") + "]"
