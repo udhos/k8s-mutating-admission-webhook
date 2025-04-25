@@ -69,7 +69,7 @@ func handlerWebhook(app *application, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg := fmt.Sprintf("%s: did not receive pod or daemontset, got %s",
+	msg := fmt.Sprintf("%s: did not receive pod/daemontset/namespace, got: %s",
 		me, admissionReviewRequest.Request.Resource.Resource)
 	httpError(w, msg, 400)
 }

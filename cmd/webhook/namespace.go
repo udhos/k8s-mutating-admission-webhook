@@ -8,7 +8,7 @@ import (
 
 func namespaceAddLabels(name string, labels map[string]string, addLabels []nsAddLabels) []string {
 
-	const me = "namespaceLabels"
+	me := fmt.Sprintf("namespaceAddLabels: namespace=%s", name)
 
 	//
 	// scan namespace rules
@@ -16,7 +16,7 @@ func namespaceAddLabels(name string, labels map[string]string, addLabels []nsAdd
 	for _, add := range addLabels {
 
 		if !add.match(name) {
-			log.Printf("%s: %s: skipped", me, name)
+			log.Printf("%s: skipped (no rule found)", me)
 			continue
 		}
 
@@ -36,8 +36,8 @@ func namespaceAddLabels(name string, labels map[string]string, addLabels []nsAdd
 
 func addLabelsToNs(caller, name string, existing, add, result map[string]string) []string {
 
-	log.Printf("%s: namespace=%s labels: existing=%v adding=%v result=%v",
-		caller, name, existing, add, result)
+	log.Printf("%s: labels: existing=%v adding=%v result=%v",
+		caller, existing, add, result)
 
 	var list []string
 	ns, errAdd := addLabelsOnMetadata(result)
