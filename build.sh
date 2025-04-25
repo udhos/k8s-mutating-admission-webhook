@@ -2,6 +2,7 @@
 
 go install golang.org/x/vuln/cmd/govulncheck@latest
 go install golang.org/x/tools/cmd/deadcode@latest
+go install github.com/mgechev/revive@latest
 
 gofmt -s -w .
 

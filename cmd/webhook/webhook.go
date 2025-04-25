@@ -48,15 +48,24 @@ func handlerWebhook(app *application, w http.ResponseWriter, r *http.Request) {
 	// Do server-side validation that we are only dealing with correct resource. This
 	// should also be part of the MutatingWebhookConfiguration in the cluster, but
 	// we should verify here before continuing.
-	podResource := metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
+	podResource := metav1.GroupVersionResource{Group: "", Version: "v1",
+		Resource: "pods"}
 	if admissionReviewRequest.Request.Resource == podResource {
 		handlePod(app, w, admissionReviewRequest, deserializer)
 		return
 	}
 
-	daemonsetResource := metav1.GroupVersionResource{Group: "apps", Version: "v1", Resource: "daemonsets"}
+	daemonsetResource := metav1.GroupVersionResource{Group: "apps",
+		Version: "v1", Resource: "daemonsets"}
 	if admissionReviewRequest.Request.Resource == daemonsetResource {
 		handleDaemonset(app, w, admissionReviewRequest, deserializer)
+		return
+	}
+
+	namespaceResource := metav1.GroupVersionResource{Group: "",
+		Version: "v1", Resource: "namespaces"}
+	if admissionReviewRequest.Request.Resource == namespaceResource {
+		handleNamespace(app, w, admissionReviewRequest, deserializer)
 		return
 	}
 
@@ -184,10 +193,67 @@ func handleDaemonset(app *application, w http.ResponseWriter,
 	if ignore {
 		log.Printf("daemonset: %s/%s: ignored", namespace, dsName)
 	} else {
-		patchList := daemonsetNodeSelector(namespace, dsName, ds.ObjectMeta.Labels, app.rules.DisableDaemonsets)
+		patchList := daemonsetNodeSelector(namespace, dsName,
+			ds.ObjectMeta.Labels, app.rules.DisableDaemonsets)
 		if len(patchList) > 0 {
 			patch = "[" + strings.Join(patchList, ",") + "]"
 		}
+	}
+
+	if app.conf.debug {
+		log.Printf("DEBUG %s: patch: '%s'",
+			me, patch)
+	}
+
+	admissionResponse.Allowed = true
+	if patch != "" {
+		patchType := admissionv1.PatchTypeJSONPatch
+		admissionResponse.PatchType = &patchType
+		admissionResponse.Patch = []byte(patch)
+	}
+
+	// Construct the response, which is just another AdmissionReview.
+	var admissionReviewResponse admissionv1.AdmissionReview
+	admissionReviewResponse.Response = admissionResponse
+	admissionReviewResponse.SetGroupVersionKind(admissionReviewRequest.GroupVersionKind())
+	admissionReviewResponse.Response.UID = admissionReviewRequest.Request.UID
+
+	resp, errMarshal := json.Marshal(admissionReviewResponse)
+	if errMarshal != nil {
+		msg := fmt.Sprintf("%s: error marshalling response json: %v",
+			me, errMarshal)
+		httpError(w, msg, 500)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(resp)
+}
+
+func handleNamespace(app *application, w http.ResponseWriter,
+	admissionReviewRequest *admissionv1.AdmissionReview, deserializer runtime.Decoder) {
+
+	const me = "handleNamespace"
+
+	// Decode the namespace from the AdmissionReview.
+	rawRequest := admissionReviewRequest.Request.Object.Raw
+	ns := corev1.Namespace{}
+	if _, _, err := deserializer.Decode(rawRequest, nil, &ns); err != nil {
+		msg := fmt.Sprintf("%s: error decoding raw namespace: %v",
+			me, err)
+		httpError(w, msg, 500)
+		return
+	}
+
+	// Create a response.
+	admissionResponse := &admissionv1.AdmissionResponse{}
+	var patch string
+
+	name := ns.GetObjectMeta().GetName()
+
+	patchList := namespaceAddLabels(name, ns.ObjectMeta.Labels, app.rules.NamespacesAddLabels)
+	if len(patchList) > 0 {
+		patch = "[" + strings.Join(patchList, ",") + "]"
 	}
 
 	if app.conf.debug {

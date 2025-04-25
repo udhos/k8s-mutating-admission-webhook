@@ -12,6 +12,14 @@ type rulesConfig struct {
 	PlacePods           []placementConfig          `yaml:"place_pods"`
 	Resources           []setResource              `yaml:"resources"`
 	DisableDaemonsets   []selectDaemonset          `yaml:"disable_daemonsets"`
+	NamespacesAddLabels []nsAddLabels              `yaml:"namespaces_add_labels"`
+}
+
+type nsAddLabels struct {
+	Name      string            `yaml:"name"`
+	AddLabels map[string]string `yaml:"add_labels"`
+
+	name *pattern
 }
 
 type selectDaemonset struct {
@@ -84,6 +92,10 @@ type tolerationConfig struct {
 
 func (s *selectDaemonset) match(namespace, dsName string, dsLabels map[string]string) bool {
 	return s.namespace.matchString(namespace) && s.name.matchString(dsName) && hasLabels(dsLabels, s.Labels)
+}
+
+func (n *nsAddLabels) match(name string) bool {
+	return n.name.matchString(name)
 }
 
 func (t *tolerationConfigPattern) match(podToleration corev1.Toleration) bool {
@@ -221,6 +233,14 @@ func newRules(data []byte) (rulesConfig, error) {
 		r.DisableDaemonsets[i] = ds
 	}
 
+	for i := range r.NamespacesAddLabels {
+		ns, errCompile := compileNamespace(r.NamespacesAddLabels[i])
+		if errCompile != nil {
+			return r, errCompile
+		}
+		r.NamespacesAddLabels[i] = ns
+	}
+
 	return r, nil
 }
 
@@ -301,4 +321,17 @@ func compileDaemonset(ds selectDaemonset) (selectDaemonset, error) {
 	}
 
 	return ds, nil
+}
+
+func compileNamespace(ns nsAddLabels) (nsAddLabels, error) {
+
+	{
+		name, errNs := patternCompile(ns.Name)
+		if errNs != nil {
+			return ns, errNs
+		}
+		ns.name = name
+	}
+
+	return ns, nil
 }

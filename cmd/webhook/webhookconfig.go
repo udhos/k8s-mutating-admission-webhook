@@ -74,6 +74,17 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConf
 						Resources:   []string{"daemonsets"},
 					},
 				},
+				{
+					Operations: []admissionregistrationv1.OperationType{
+						admissionregistrationv1.Create,
+						admissionregistrationv1.Update,
+					},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{""},
+						APIVersions: []string{"v1"},
+						Resources:   []string{"namespaces"},
+					},
+				},
 			},
 			NamespaceSelector: &metav1.LabelSelector{
 				/*

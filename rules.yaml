@@ -99,3 +99,8 @@ disable_daemonsets:
     name: ^ds2$   # match daemonset name
     #labels:
     #  a: b
+
+namespaces_add_labels:
+  - name: ^default$
+    add_labels:
+      istio-injection: enabled
