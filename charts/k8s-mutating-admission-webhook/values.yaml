@@ -92,6 +92,7 @@ configMapProperties:
   #SERVICE: "k8s-mutating-admission-webhook"
   #WEBHOOK_CONFIG_NAME: "udhos.github.io"
   #NAMESPACE_EXCLUDE_LABEL: "webhook"
+  #CERT_DURATION_YEARS: "10"
   #
   # Ignore: means that an error calling the webhook is ignored and the API request is allowed to continue.
   # Fail: means that an error calling the webhook causes the admission to fail and the API request to be rejected.

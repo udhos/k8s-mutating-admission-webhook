@@ -82,7 +82,8 @@ func main() {
 	commonName := webhookServiceName + "." + webhookNamespace + ".svc"
 
 	const org = "github.com/udhos/k8s-mutating-admission-webhook"
-	caPEM, certPEM, certKeyPEM, errCert := generateCert([]string{org}, dnsNames, commonName)
+	caPEM, certPEM, certKeyPEM, errCert := generateCert([]string{org},
+		dnsNames, commonName, app.conf.certDurationYears)
 	if errCert != nil {
 		log.Fatalf("Failed to generate ca and certificate key pair: %v", errCert)
 	}

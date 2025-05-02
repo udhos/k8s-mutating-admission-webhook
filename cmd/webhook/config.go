@@ -16,6 +16,7 @@ type config struct {
 	service               string
 	webhookConfigName     string
 	namespaceExcludeLabel string
+	certDurationYears     int
 
 	// Ignore: means that an error calling the webhook is ignored and the API request is allowed to continue.
 	// Fail: means that an error calling the webhook causes the admission to fail and the API request to be rejected.
@@ -38,6 +39,7 @@ func getConfig() config {
 		service:               envString("SERVICE", "k8s-mutating-admission-webhook"),
 		webhookConfigName:     envString("WEBHOOK_CONFIG_NAME", "udhos.github.io"),
 		namespaceExcludeLabel: envString("NAMESPACE_EXCLUDE_LABEL", "webhook"),
+		certDurationYears:     envInt("CERT_DURATION_YEARS", 10),
 		failurePolicy:         envString("FAILURE_POLICY", "Ignore"),
 		reinvocationPolicy:    envString("REINVOCATION_POLICY", "IfNeeded"),
 
@@ -78,5 +80,22 @@ func envBool(name string, defaultValue bool) bool {
 		log.Printf("bad %s=[%s]: error: %v", name, str, errConv)
 	}
 	log.Printf("%s=[%s] using %s=%t default=%t", name, str, name, defaultValue, defaultValue)
+	return defaultValue
+}
+
+// envInt extracts int from env var.
+// It returns the provided defaultValue if the env var is empty.
+// The value returned is also recorded in logs.
+func envInt(name string, defaultValue int) int {
+	str := os.Getenv(name)
+	if str != "" {
+		value, errConv := strconv.ParseInt(str, 10, 64)
+		if errConv == nil {
+			log.Printf("%s=[%s] using %s=%d default=%d", name, str, name, value, defaultValue)
+			return int(value)
+		}
+		log.Printf("bad %s=[%s]: error: %v", name, str, errConv)
+	}
+	log.Printf("%s=[%s] using %s=%d default=%d", name, str, name, defaultValue, defaultValue)
 	return defaultValue
 }

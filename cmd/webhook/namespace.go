@@ -28,13 +28,13 @@ func namespaceAddLabels(name string, labels map[string]string, addLabels []nsAdd
 		maps.Copy(lab, labels)
 		maps.Copy(lab, add.AddLabels)
 
-		return addLabelsToNs(me, name, labels, add.AddLabels, lab)
+		return addLabelsToNs(me, labels, add.AddLabels, lab)
 	}
 
 	return nil
 }
 
-func addLabelsToNs(caller, name string, existing, add, result map[string]string) []string {
+func addLabelsToNs(caller string, existing, add, result map[string]string) []string {
 
 	log.Printf("%s: labels: existing=%v adding=%v result=%v",
 		caller, existing, add, result)

@@ -14,13 +14,14 @@ import (
 // generateCert generate a self-signed CA for given organization
 // and sign certificate with the CA for given common name and dns names
 // it resurns the CA, certificate and private key in PEM format
-func generateCert(orgs, dnsNames []string, commonName string) (*bytes.Buffer, *bytes.Buffer, *bytes.Buffer, error) {
+func generateCert(orgs, dnsNames []string, commonName string,
+	certDurationInYears int) (*bytes.Buffer, *bytes.Buffer, *bytes.Buffer, error) {
 	// init CA config
 	ca := &x509.Certificate{
 		SerialNumber:          big.NewInt(2022),
 		Subject:               pkix.Name{Organization: orgs},
 		NotBefore:             time.Now(),
-		NotAfter:              time.Now().AddDate(1, 0, 0), // expired in 1 year
+		NotAfter:              time.Now().AddDate(certDurationInYears, 0, 0), // expired in certDurationInYears years
 		IsCA:                  true,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
