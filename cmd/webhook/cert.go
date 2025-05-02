@@ -21,7 +21,7 @@ func generateCert(orgs, dnsNames []string, commonName string,
 		SerialNumber:          big.NewInt(2022),
 		Subject:               pkix.Name{Organization: orgs},
 		NotBefore:             time.Now(),
-		NotAfter:              time.Now().AddDate(certDurationInYears, 0, 0), // expired in certDurationInYears years
+		NotAfter:              time.Now().AddDate(certDurationInYears, 0, 0), // expire in certDurationInYears years
 		IsCA:                  true,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
@@ -56,7 +56,7 @@ func generateCert(orgs, dnsNames []string, commonName string,
 			Organization: orgs,
 		},
 		NotBefore:   time.Now(),
-		NotAfter:    time.Now().AddDate(1, 0, 0), // expired in 1 year
+		NotAfter:    time.Now().AddDate(certDurationInYears, 0, 0), // expire in certDurationInYears years
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:    x509.KeyUsageDigitalSignature,
 	}
