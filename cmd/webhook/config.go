@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -91,6 +92,14 @@ func envInt(name string, defaultValue int) int {
 	if str != "" {
 		value, errConv := strconv.ParseInt(str, 10, 64)
 		if errConv == nil {
+
+			// Check for potential overflow/underflow before converting to int
+			if value > math.MaxInt || value < math.MinInt {
+				log.Printf("WARNING: %s=[%s] value %d is out of range for int. Using default value %d",
+					name, str, value, defaultValue)
+				return defaultValue
+			}
+
 			log.Printf("%s=[%s] using %s=%d default=%d", name, str, name, value, defaultValue)
 			return int(value)
 		}
