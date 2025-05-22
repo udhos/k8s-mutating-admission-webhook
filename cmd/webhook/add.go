@@ -6,7 +6,8 @@ import (
 	"log"
 )
 
-func addPlacement(namespace string, podName string, podLabels map[string]string, placePods []placementConfig) []string {
+func addPlacement(namespace string, podName string,
+	podLabels map[string]string, placePods []placementConfig) []string {
 
 	//
 	// scan pod add rules

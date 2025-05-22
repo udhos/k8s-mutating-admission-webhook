@@ -76,6 +76,17 @@ place_pods:
       node_selector:
         key1: value1
         key2: value2
+  - pods:
+      - labels:
+          batch.kubernetes.io/job-name: "regexp="
+    add:
+      node_selector:
+        nodepool: job
+      tolerations:
+        - key: nodepool
+          operator: Equal
+          value: job
+          effect: NoSchedule
 
 resources:
   - pod:

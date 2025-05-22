@@ -77,6 +77,36 @@ place_pods:
         node: white-or-black
 `
 
+const placeRulesHasJobLabel = `
+place_pods:
+  - pods:
+      - labels:
+          batch.kubernetes.io/job-name: "regexp="
+    add:
+      node_selector:
+        nodepool: job
+      tolerations:
+        - key: nodepool
+          operator: Equal
+          value: job
+          effect: NoSchedule
+`
+
+const placeRulesHasJobLabelValue = `
+place_pods:
+  - pods:
+      - labels:
+          batch.kubernetes.io/job-name: "regexp=^test$"
+    add:
+      node_selector:
+        nodepool: job
+      tolerations:
+        - key: nodepool
+          operator: Equal
+          value: job
+          effect: NoSchedule
+`
+
 var placePodsTestTable = []placePodsTestCase{
 	{
 		testName:  "empty rule",
@@ -158,8 +188,41 @@ var placePodsTestTable = []placePodsTestCase{
 		podLabels: `{"color":"green"}`,
 		expected:  `[]`,
 	},
+	{
+		testName:  "it is job",
+		rules:     placeRulesHasJobLabel,
+		namespace: "default",
+		podName:   "pod-1",
+		podLabels: `{"batch.kubernetes.io/job-name":"anything"}`,
+		expected:  `[{"op":"add","path":"/spec/tolerations/-","value":{"key":"nodepool","operator":"Equal","effect":"NoSchedule","value":"job"}} {"op":"add","path":"/spec/nodeSelector","value":{"nodepool":"job"}}]`,
+	},
+	{
+		testName:  "not a job",
+		rules:     placeRulesHasJobLabel,
+		namespace: "default",
+		podName:   "pod-1",
+		podLabels: `{"not-job":"anything"}`,
+		expected:  `[]`,
+	},
+	{
+		testName:  "it is job with right label value",
+		rules:     placeRulesHasJobLabelValue,
+		namespace: "default",
+		podName:   "pod-1",
+		podLabels: `{"batch.kubernetes.io/job-name":"test"}`,
+		expected:  `[{"op":"add","path":"/spec/tolerations/-","value":{"key":"nodepool","operator":"Equal","effect":"NoSchedule","value":"job"}} {"op":"add","path":"/spec/nodeSelector","value":{"nodepool":"job"}}]`,
+	},
+	{
+		testName:  "it is job with wrong label value",
+		rules:     placeRulesHasJobLabelValue,
+		namespace: "default",
+		podName:   "pod-1",
+		podLabels: `{"batch.kubernetes.io/job-name":"test1"}`,
+		expected:  `[]`,
+	},
 }
 
+// go test -count 1 -run '^TestPlacePods$' ./cmd/webhook
 func TestPlacePods(t *testing.T) {
 
 	for i, data := range placePodsTestTable {

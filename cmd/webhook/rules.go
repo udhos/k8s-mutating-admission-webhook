@@ -1,7 +1,9 @@
 package main
 
 import (
+	"log"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
@@ -105,7 +107,8 @@ func (t *tolerationConfigPattern) match(podToleration corev1.Toleration) bool {
 		t.effect.matchString(string(podToleration.Effect))
 }
 
-func (pc *placementConfig) match(namespace, podName string, podLabels map[string]string) bool {
+func (pc *placementConfig) match(namespace, podName string,
+	podLabels map[string]string) bool {
 	for _, podC := range pc.Pods {
 		if podC.match(namespace, podName, podLabels) {
 			return true
@@ -124,16 +127,32 @@ func (p *podConfig) match(namespace, podName string, podLabels map[string]string
 		}
 	}
 
-	return p.namespace.matchString(namespace) && p.name.matchString(podName) && hasLabels(podLabels, p.Labels)
+	return p.namespace.matchString(namespace) &&
+		p.name.matchString(podName) && hasLabels(podLabels, p.Labels)
 }
 
 func hasLabels(existingLabels, requiredLabels map[string]string) bool {
 	for rk, rv := range requiredLabels {
-		if ev, found := existingLabels[rk]; !found || ev != rv {
+		if ev, found := existingLabels[rk]; !found || !matchLabelValue(ev, rv) {
 			return false
 		}
 	}
 	return true
+}
+
+func matchLabelValue(existing, required string) bool {
+	req := strings.TrimPrefix(required, "regexp=")
+	if req == required {
+		// not a regexp
+		return existing == required
+	}
+	// found regexp
+	pat, err := patternCompile(req)
+	if err != nil {
+		log.Printf("ERROR: compiling label value pattern: value:%s error:%v", required, err)
+		return false
+	}
+	return pat.matchString(existing)
 }
 
 func loadRules(path string) (rulesConfig, error) {
