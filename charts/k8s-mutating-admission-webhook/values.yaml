@@ -182,6 +182,18 @@ configDir:
           node_selector:
             key1: value1
             key2: value2
+      - pods:
+          - namespace: default
+        add: # add container env vars
+          containers:
+            nginx: # container name match is exact
+                env:
+                - name: ENV1
+                  value: VALUE1
+                - name: MY_NODE_NAME
+                  valueFrom:
+                    fieldRef:
+                        fieldPath: spec.nodeName
 
     resources:
       - pod:

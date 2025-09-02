@@ -1,11 +1,10 @@
 module github.com/udhos/k8s-mutating-admission-webhook
 
-go 1.24.2
+go 1.25.0
 
 require (
 	github.com/KimMachineGun/automemlimit v0.7.2
 	github.com/udhos/kube v1.0.4
-	go.uber.org/automaxprocs v1.6.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.33.1
 	k8s.io/apimachinery v0.33.1

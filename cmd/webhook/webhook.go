@@ -116,7 +116,9 @@ func handlePod(app *application, w http.ResponseWriter,
 		nodeSelectorRemovalList := removeNodeSelectors(namespace, podName, pod.Spec.NodeSelector, app.conf.acceptNodeSelectors)
 
 		// add tolerations and nodeSelector
-		placementList := addPlacement(namespace, podName, pod.ObjectMeta.Labels, app.rules.PlacePods)
+		placementList := addPlacement(namespace, podName,
+			pod.ObjectMeta.Labels, pod.Spec.Containers,
+			app.rules.PlacePods)
 
 		resourceList := addResource(namespace, podName, pod.ObjectMeta.Labels,
 			pod.Spec.Containers, app.rules.Resources, app.conf.debug)
@@ -154,6 +156,10 @@ func handlePod(app *application, w http.ResponseWriter,
 			me, errMarshal)
 		httpError(w, msg, 500)
 		return
+	}
+
+	if app.conf.debug {
+		log.Printf("DEBUG %s: response body: %v", me, string(resp))
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -226,12 +232,17 @@ func handleDaemonset(app *application, w http.ResponseWriter,
 		return
 	}
 
+	if app.conf.debug {
+		log.Printf("DEBUG %s: response body: %v", me, string(resp))
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(resp)
 }
 
 func handleNamespace(app *application, w http.ResponseWriter,
-	admissionReviewRequest *admissionv1.AdmissionReview, deserializer runtime.Decoder) {
+	admissionReviewRequest *admissionv1.AdmissionReview,
+	deserializer runtime.Decoder) {
 
 	const me = "handleNamespace"
 
@@ -251,7 +262,8 @@ func handleNamespace(app *application, w http.ResponseWriter,
 
 	name := ns.GetObjectMeta().GetName()
 
-	patchList := namespaceAddLabels(name, ns.ObjectMeta.Labels, app.rules.NamespacesAddLabels)
+	patchList := namespaceAddLabels(name, ns.ObjectMeta.Labels,
+		app.rules.NamespacesAddLabels)
 	if len(patchList) > 0 {
 		patch = "[" + strings.Join(patchList, ",") + "]"
 	}
@@ -280,6 +292,10 @@ func handleNamespace(app *application, w http.ResponseWriter,
 			me, errMarshal)
 		httpError(w, msg, 500)
 		return
+	}
+
+	if app.conf.debug {
+		log.Printf("DEBUG %s: response body: %v", me, string(resp))
 	}
 
 	w.Header().Set("Content-Type", "application/json")

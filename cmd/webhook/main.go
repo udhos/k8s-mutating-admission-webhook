@@ -12,7 +12,6 @@ import (
 	"runtime"
 
 	_ "github.com/KimMachineGun/automemlimit"
-	_ "go.uber.org/automaxprocs"
 	"gopkg.in/yaml.v3"
 	api_runtime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"

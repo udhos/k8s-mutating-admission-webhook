@@ -81,8 +81,13 @@ type placementConfig struct {
 }
 
 type addConfig struct {
-	Tolerations  []tolerationConfig `yaml:"tolerations"`
-	NodeSelector map[string]string  `yaml:"node_selector"`
+	Tolerations  []tolerationConfig         `yaml:"tolerations"`
+	NodeSelector map[string]string          `yaml:"node_selector"`
+	Containers   map[string]containerConfig `yaml:"containers"` // containerName -> config
+}
+
+type containerConfig struct {
+	Env []map[string]any `yaml:"env"` // field name -> value
 }
 
 type tolerationConfig struct {

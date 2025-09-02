@@ -87,6 +87,22 @@ place_pods:
           operator: Equal
           value: job
           effect: NoSchedule
+  - pods:
+      - namespace: example
+    add: # add container env vars
+      containers:
+        nginx: # container name match is exact
+            env:
+            - name: ENV1
+              value: VALUE1
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                    fieldPath: spec.nodeName
+            - name: MY_CPU_REQUEST
+              valueFrom:
+                resourceFieldRef:
+                    containerName: test-container
 
 resources:
   - pod:

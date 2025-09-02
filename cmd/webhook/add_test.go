@@ -4,15 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 type placePodsTestCase struct {
-	testName  string
-	rules     string
-	namespace string
-	podName   string
-	podLabels string
-	expected  string
+	testName   string
+	rules      string
+	namespace  string
+	podName    string
+	podLabels  string
+	containers []corev1.Container
+	expected   string
 }
 
 const placeRulesMissingMatch = `
@@ -105,6 +108,26 @@ place_pods:
           operator: Equal
           value: job
           effect: NoSchedule
+`
+
+const placeRulesEnv = `
+place_pods:
+  - pods:
+      - namespace: ""
+    add:
+      containers:
+        test-container:
+            env:
+            - name: ENV1
+              value: VALUE1
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                    fieldPath: spec.nodeName
+            - name: MY_CPU_REQUEST
+              valueFrom:
+                resourceFieldRef:
+                    containerName: test-container
 `
 
 var placePodsTestTable = []placePodsTestCase{
@@ -220,6 +243,54 @@ var placePodsTestTable = []placePodsTestCase{
 		podLabels: `{"batch.kubernetes.io/job-name":"test1"}`,
 		expected:  `[]`,
 	},
+	{
+		testName:  "add env to container with empty env",
+		rules:     placeRulesEnv,
+		namespace: "default",
+		podName:   "pod-env-1",
+		containers: []corev1.Container{
+			{Name: "test-container"},
+		},
+		expected: `[{"op":"add","path":"/spec/containers/0/env","value":[]} {"op":"add","path":"/spec/containers/0/env/-","value":{"name":"ENV1","value":"VALUE1"}} {"op":"add","path":"/spec/containers/0/env/-","value":{"name":"MY_NODE_NAME","valueFrom":{"fieldRef":{"fieldPath":"spec.nodeName"}}}} {"op":"add","path":"/spec/containers/0/env/-","value":{"name":"MY_CPU_REQUEST","valueFrom":{"resourceFieldRef":{"containerName":"test-container"}}}}]`,
+	},
+	{
+		testName:  "add env to container",
+		rules:     placeRulesEnv,
+		namespace: "default",
+		podName:   "pod-env-1",
+		containers: []corev1.Container{
+			{
+				Name: "test-container",
+				Env:  []corev1.EnvVar{{Name: "KEY1", Value: "VAL1"}},
+			},
+		},
+		expected: `[{"op":"add","path":"/spec/containers/0/env/-","value":{"name":"ENV1","value":"VALUE1"}} {"op":"add","path":"/spec/containers/0/env/-","value":{"name":"MY_NODE_NAME","valueFrom":{"fieldRef":{"fieldPath":"spec.nodeName"}}}} {"op":"add","path":"/spec/containers/0/env/-","value":{"name":"MY_CPU_REQUEST","valueFrom":{"resourceFieldRef":{"containerName":"test-container"}}}}]`,
+	},
+	{
+		testName:  "add env to second container",
+		rules:     placeRulesEnv,
+		namespace: "default",
+		podName:   "pod-env-2",
+		containers: []corev1.Container{
+			{Name: "first"},
+			{
+				Name: "test-container",
+				Env:  []corev1.EnvVar{{Name: "KEY1", Value: "VAL1"}},
+			},
+		},
+		expected: `[{"op":"add","path":"/spec/containers/1/env/-","value":{"name":"ENV1","value":"VALUE1"}} {"op":"add","path":"/spec/containers/1/env/-","value":{"name":"MY_NODE_NAME","valueFrom":{"fieldRef":{"fieldPath":"spec.nodeName"}}}} {"op":"add","path":"/spec/containers/1/env/-","value":{"name":"MY_CPU_REQUEST","valueFrom":{"resourceFieldRef":{"containerName":"test-container"}}}}]`,
+	},
+	{
+		testName:  "add env to non-existing container",
+		rules:     placeRulesEnv,
+		namespace: "default",
+		podName:   "pod-env-3",
+		containers: []corev1.Container{
+			{Name: "first"},
+			{Name: "second "},
+		},
+		expected: `[]`,
+	},
 }
 
 // go test -count 1 -run '^TestPlacePods$' ./cmd/webhook
@@ -241,12 +312,14 @@ func TestPlacePods(t *testing.T) {
 			}
 		}
 
-		list := addPlacement(data.namespace, data.podName, podLabels, r.PlacePods)
+		list := addPlacement(data.namespace, data.podName, podLabels,
+			data.containers, r.PlacePods)
 
 		result := fmt.Sprintf("%v", list)
 
 		if result != data.expected {
-			t.Errorf("%s got='%s' expected='%s'", testLabel, result, data.expected)
+			t.Errorf("%s\n==      got:'%s'\n== expected:'%s'",
+				testLabel, result, data.expected)
 		}
 	}
 }
