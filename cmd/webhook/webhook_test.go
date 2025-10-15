@@ -11,13 +11,14 @@ import (
 )
 
 type tolerationTestCase struct {
-	testName        string
-	rules           string
-	podTolerations  string
-	namespace       string
-	podName         string
-	podLabels       string
-	expectedIndices string
+	testName          string
+	rules             string
+	podTolerations    string
+	namespace         string
+	podName           string
+	priorityClassName string
+	podLabels         string
+	expectedIndices   string
 }
 
 const emptyRule = ``
@@ -282,7 +283,8 @@ func TestRestrictTolerations(t *testing.T) {
 		}
 
 		list := removeTolerationsIndices(data.namespace, data.podName,
-			podLabels, podTolerations, r.RestrictTolerations)
+			data.priorityClassName, podLabels, podTolerations,
+			r.RestrictTolerations)
 
 		str := fmt.Sprintf("%v", list)
 

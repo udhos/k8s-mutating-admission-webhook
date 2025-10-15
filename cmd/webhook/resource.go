@@ -9,7 +9,7 @@ import (
 	api_resource "k8s.io/apimachinery/pkg/api/resource"
 )
 
-func addResource(namespace, podName string, podLabels map[string]string,
+func addResource(namespace, podName, priorityClassName string, podLabels map[string]string,
 	containers []corev1.Container, resources []setResource,
 	debug bool) []string {
 
@@ -21,7 +21,7 @@ func addResource(namespace, podName string, podLabels map[string]string,
 	// scan resource rules
 	//
 	for _, r := range resources {
-		if !r.Pod.match(namespace, podName, podLabels) {
+		if !r.Pod.match(namespace, podName, priorityClassName, podLabels) {
 			continue
 		}
 		// found pod

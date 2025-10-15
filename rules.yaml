@@ -104,6 +104,18 @@ place_pods:
                 resourceFieldRef:
                     containerName: test-container
 
+  - pods:
+      - has_priority_class_name: ^$ # match empty priority class name
+        namespace: ""               # match any namespace
+    add:
+      priority_class_name: medium
+  - pods:
+      - has_priority_class_name: _reservation # exclude reservation class
+        namespace: ""                         # match any namespace
+    add:
+      priority_class_name: low
+
+
 resources:
   - pod:
       namespace: "" # match anything

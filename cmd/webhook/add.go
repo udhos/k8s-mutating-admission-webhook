@@ -8,7 +8,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func addPlacement(namespace, podName string,
+func addPlacement(namespace, podName, priorityClassName string,
+	priority *int32,
 	podLabels map[string]string,
 	containers []corev1.Container,
 	placePods []placementConfig) []string {
@@ -18,19 +19,20 @@ func addPlacement(namespace, podName string,
 	//
 	for _, pc := range placePods {
 
-		if pc.match(namespace, podName, podLabels) {
+		if pc.match(namespace, podName, priorityClassName, podLabels) {
 			//
 			// found add rule for pod
 			//
-			return addOne(namespace, podName, containers, pc.Add)
+			return addOne(namespace, podName, priorityClassName, priority,
+				containers, pc.Add)
 		}
 	}
 
 	return nil
 }
 
-func addOne(namespace, podName string, containers []corev1.Container,
-	add addConfig) []string {
+func addOne(namespace, podName, priorityClassName string, priority *int32,
+	containers []corev1.Container, add addConfig) []string {
 
 	var list []string
 
@@ -50,6 +52,38 @@ func addOne(namespace, podName string, containers []corev1.Container,
 	if len(add.Containers) > 0 {
 		list = append(list, addContainerEnv(namespace, podName, containers,
 			add.Containers)...)
+	}
+
+	if add.PriorityClassName != "" {
+		list = append(list, setPriorityClass(namespace, podName,
+			add.PriorityClassName, priorityClassName, priority)...)
+	}
+
+	return list
+}
+
+func setPriorityClass(namespace, podName, newClass, oldClass string, priority *int32) []string {
+	var list []string
+
+	var priorityStr string
+	if priority != nil {
+		priorityStr = fmt.Sprintf("%d", *priority)
+	} else {
+		priorityStr = "<undefined>"
+	}
+
+	log.Printf("setPriorityClass: ns=%s pod=%s oldClass='%s' newClass='%s' oldPriority=%s",
+		namespace, podName, oldClass, newClass, priorityStr)
+
+	// add or replace priorityClassName
+	str := fmt.Sprintf(`{"op":"add","path":"/spec/priorityClassName","value":"%s"}`,
+		newClass)
+	list = append(list, str)
+
+	// remove priority if set
+	if priority != nil {
+		str := `{"op":"remove","path":"/spec/priority"}`
+		list = append(list, str)
 	}
 
 	return list

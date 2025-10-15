@@ -14,9 +14,10 @@ import (
 type resourceTestCase struct {
 	name string
 
-	namespace string
-	podName   string
-	podLabels map[string]string
+	namespace         string
+	podName           string
+	priorityClassName string
+	podLabels         map[string]string
 
 	rules string
 
@@ -382,7 +383,9 @@ func TestAddResource(t *testing.T) {
 
 			const debug = false
 
-			list := addResource(data.namespace, data.podName, data.podLabels, containerList, r.Resources, debug)
+			list := addResource(data.namespace, data.podName,
+				data.priorityClassName, data.podLabels, containerList,
+				r.Resources, debug)
 
 			expectedSize := 0
 			for _, c := range data.containers {

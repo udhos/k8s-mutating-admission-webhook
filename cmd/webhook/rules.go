@@ -65,14 +65,16 @@ type tolerationConfigPattern struct {
 }
 
 type podConfig struct {
-	Namespace string            `yaml:"namespace"`
-	Name      string            `yaml:"name"`
-	Labels    map[string]string `yaml:"labels"`
+	Namespace            string            `yaml:"namespace"`
+	Name                 string            `yaml:"name"`
+	HasPriorityClassName string            `yaml:"has_priority_class_name"`
+	Labels               map[string]string `yaml:"labels"`
 
 	And []podConfig `yaml:"and"`
 
-	namespace *pattern
-	name      *pattern
+	namespace            *pattern
+	name                 *pattern
+	hasPriorityClassName *pattern
 }
 
 type placementConfig struct {
@@ -81,9 +83,10 @@ type placementConfig struct {
 }
 
 type addConfig struct {
-	Tolerations  []tolerationConfig         `yaml:"tolerations"`
-	NodeSelector map[string]string          `yaml:"node_selector"`
-	Containers   map[string]containerConfig `yaml:"containers"` // containerName -> config
+	Tolerations       []tolerationConfig         `yaml:"tolerations"`
+	NodeSelector      map[string]string          `yaml:"node_selector"`
+	PriorityClassName string                     `yaml:"priority_class_name"`
+	Containers        map[string]containerConfig `yaml:"containers"` // containerName -> config
 }
 
 type containerConfig struct {
@@ -112,28 +115,30 @@ func (t *tolerationConfigPattern) match(podToleration corev1.Toleration) bool {
 		t.effect.matchString(string(podToleration.Effect))
 }
 
-func (pc *placementConfig) match(namespace, podName string,
+func (pc *placementConfig) match(namespace, podName, priorityClassName string,
 	podLabels map[string]string) bool {
 	for _, podC := range pc.Pods {
-		if podC.match(namespace, podName, podLabels) {
+		if podC.match(namespace, podName, priorityClassName, podLabels) {
 			return true
 		}
 	}
 	return false
 }
 
-func (p *podConfig) match(namespace, podName string, podLabels map[string]string) bool {
+func (p *podConfig) match(namespace, podName, priorityClassName string, podLabels map[string]string) bool {
 
 	if len(p.And) > 0 {
 		for _, sub := range p.And {
-			if !sub.match(namespace, podName, podLabels) {
+			if !sub.match(namespace, podName, priorityClassName, podLabels) {
 				return false
 			}
 		}
 	}
 
 	return p.namespace.matchString(namespace) &&
-		p.name.matchString(podName) && hasLabels(podLabels, p.Labels)
+		p.name.matchString(podName) &&
+		p.hasPriorityClassName.matchString(priorityClassName) &&
+		hasLabels(podLabels, p.Labels)
 }
 
 func hasLabels(existingLabels, requiredLabels map[string]string) bool {
@@ -286,6 +291,14 @@ func compilePod(p podConfig) (podConfig, error) {
 		p.name = name
 	}
 
+	{
+		hasPriorityClassName, err := patternCompile(p.HasPriorityClassName)
+		if err != nil {
+			return p, err
+		}
+		p.hasPriorityClassName = hasPriorityClassName
+	}
+
 	and, errAnd := compileAnd(p.And)
 	if errAnd != nil {
 		return p, errAnd
@@ -313,6 +326,14 @@ func compileAnd(list []podConfig) ([]podConfig, error) {
 				return list, errName
 			}
 			list[i].name = name
+		}
+
+		{
+			priorityClass, err := patternCompile(p.HasPriorityClassName)
+			if err != nil {
+				return list, err
+			}
+			list[i].hasPriorityClassName = priorityClass
 		}
 
 		and, errAnd := compileAnd(p.And)

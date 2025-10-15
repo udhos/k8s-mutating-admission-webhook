@@ -112,15 +112,20 @@ func handlePod(app *application, w http.ResponseWriter,
 	} else {
 
 		// remove tolerations and nodeSelector
-		tolerationRemovalList := removeTolerations(namespace, podName, pod.ObjectMeta.Labels, pod.Spec.Tolerations, app.rules.RestrictTolerations)
-		nodeSelectorRemovalList := removeNodeSelectors(namespace, podName, pod.Spec.NodeSelector, app.conf.acceptNodeSelectors)
+		tolerationRemovalList := removeTolerations(namespace, podName,
+			pod.Spec.PriorityClassName, pod.ObjectMeta.Labels,
+			pod.Spec.Tolerations, app.rules.RestrictTolerations)
+		nodeSelectorRemovalList := removeNodeSelectors(namespace,
+			podName, pod.Spec.NodeSelector, app.conf.acceptNodeSelectors)
 
 		// add tolerations and nodeSelector
 		placementList := addPlacement(namespace, podName,
+			pod.Spec.PriorityClassName, pod.Spec.Priority,
 			pod.ObjectMeta.Labels, pod.Spec.Containers,
 			app.rules.PlacePods)
 
-		resourceList := addResource(namespace, podName, pod.ObjectMeta.Labels,
+		resourceList := addResource(namespace, podName,
+			pod.Spec.PriorityClassName, pod.ObjectMeta.Labels,
 			pod.Spec.Containers, app.rules.Resources, app.conf.debug)
 
 		patchList := append(tolerationRemovalList, nodeSelectorRemovalList...)

@@ -9,13 +9,15 @@ import (
 )
 
 type placePodsTestCase struct {
-	testName   string
-	rules      string
-	namespace  string
-	podName    string
-	podLabels  string
-	containers []corev1.Container
-	expected   string
+	testName          string
+	rules             string
+	namespace         string
+	podName           string
+	priorityClassName string
+	priority          *int32
+	podLabels         string
+	containers        []corev1.Container
+	expected          string
 }
 
 const placeRulesMissingMatch = `
@@ -128,6 +130,20 @@ place_pods:
               valueFrom:
                 resourceFieldRef:
                     containerName: test-container
+`
+
+const placePriorityClass = `
+place_pods:
+  - pods:
+      - has_priority_class_name: ^$ # match empty priority class name
+        namespace: ""               # match any namespace
+    add:
+      priority_class_name: medium
+  - pods:
+      - has_priority_class_name: _reservation # exclude reservation class
+        namespace: ""                         # match any namespace
+    add:
+      priority_class_name: low
 `
 
 var placePodsTestTable = []placePodsTestCase{
@@ -291,7 +307,42 @@ var placePodsTestTable = []placePodsTestCase{
 		},
 		expected: `[]`,
 	},
+	{
+		testName:          "empty priority class name",
+		rules:             placePriorityClass,
+		namespace:         "default",
+		podName:           "pod-1",
+		priorityClassName: "",
+		expected:          `[{"op":"add","path":"/spec/priorityClassName","value":"medium"}]`,
+	},
+	{
+		testName:          "reservation priority class name",
+		rules:             placePriorityClass,
+		namespace:         "default",
+		podName:           "pod-1",
+		priorityClassName: "reservation",
+		expected:          "[]",
+	},
+	{
+		testName:          "other priority class name",
+		rules:             placePriorityClass,
+		namespace:         "default",
+		podName:           "pod-1",
+		priorityClassName: "other",
+		expected:          `[{"op":"add","path":"/spec/priorityClassName","value":"low"}]`,
+	},
+	{
+		testName:          "existing priority should be removed",
+		rules:             placePriorityClass,
+		namespace:         "default",
+		podName:           "pod-1",
+		priorityClassName: "other",
+		priority:          &priority,
+		expected:          `[{"op":"add","path":"/spec/priorityClassName","value":"low"} {"op":"remove","path":"/spec/priority"}]`,
+	},
 }
+
+var priority int32 = 500
 
 // go test -count 1 -run '^TestPlacePods$' ./cmd/webhook
 func TestPlacePods(t *testing.T) {
@@ -312,8 +363,9 @@ func TestPlacePods(t *testing.T) {
 			}
 		}
 
-		list := addPlacement(data.namespace, data.podName, podLabels,
-			data.containers, r.PlacePods)
+		list := addPlacement(data.namespace, data.podName,
+			data.priorityClassName, data.priority, podLabels, data.containers,
+			r.PlacePods)
 
 		result := fmt.Sprintf("%v", list)
 
