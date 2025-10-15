@@ -111,26 +111,34 @@ func handlePod(app *application, w http.ResponseWriter,
 		log.Printf("pod: %s/%s: ignored", namespace, podName)
 	} else {
 
-		// remove tolerations and nodeSelector
-		tolerationRemovalList := removeTolerations(namespace, podName,
-			pod.Spec.PriorityClassName, pod.ObjectMeta.Labels,
-			pod.Spec.Tolerations, app.rules.RestrictTolerations)
-		nodeSelectorRemovalList := removeNodeSelectors(namespace,
-			podName, pod.Spec.NodeSelector, app.conf.acceptNodeSelectors)
+		var patchList []string
 
-		// add tolerations and nodeSelector
-		placementList := addPlacement(namespace, podName,
-			pod.Spec.PriorityClassName, pod.Spec.Priority,
-			pod.ObjectMeta.Labels, pod.Spec.Containers,
-			app.rules.PlacePods)
+		for _, r := range app.rules.Rules {
 
-		resourceList := addResource(namespace, podName,
-			pod.Spec.PriorityClassName, pod.ObjectMeta.Labels,
-			pod.Spec.Containers, app.rules.Resources, app.conf.debug)
+			// remove tolerations and nodeSelector
+			tolerationRemovalList := removeTolerations(namespace, podName,
+				pod.Spec.PriorityClassName, pod.ObjectMeta.Labels,
+				pod.Spec.Tolerations, r.RestrictTolerations)
 
-		patchList := append(tolerationRemovalList, nodeSelectorRemovalList...)
-		patchList = append(patchList, placementList...)
-		patchList = append(patchList, resourceList...)
+			nodeSelectorRemovalList := removeNodeSelectors(namespace,
+				podName, pod.Spec.NodeSelector, app.conf.acceptNodeSelectors)
+
+			// add tolerations, nodeSelector, priorityClass, container env var
+			placementList := addPlacement(namespace, podName,
+				pod.Spec.PriorityClassName, pod.Spec.Priority,
+				pod.ObjectMeta.Labels, pod.Spec.Containers,
+				r.PlacePods)
+
+			// add resource requests/limits
+			resourceList := addResource(namespace, podName,
+				pod.Spec.PriorityClassName, pod.ObjectMeta.Labels,
+				pod.Spec.Containers, r.Resources, app.conf.debug)
+
+			patchList = append(patchList, tolerationRemovalList...)
+			patchList = append(patchList, nodeSelectorRemovalList...)
+			patchList = append(patchList, placementList...)
+			patchList = append(patchList, resourceList...)
+		}
 
 		if len(patchList) > 0 {
 			patch = "[" + strings.Join(patchList, ",") + "]"
@@ -204,8 +212,14 @@ func handleDaemonset(app *application, w http.ResponseWriter,
 	if ignore {
 		log.Printf("daemonset: %s/%s: ignored", namespace, dsName)
 	} else {
-		patchList := daemonsetNodeSelector(namespace, dsName,
-			ds.ObjectMeta.Labels, app.rules.DisableDaemonsets)
+
+		var patchList []string
+
+		for _, r := range app.rules.Rules {
+			patchList = daemonsetNodeSelector(namespace, dsName,
+				ds.ObjectMeta.Labels, r.DisableDaemonsets)
+		}
+
 		if len(patchList) > 0 {
 			patch = "[" + strings.Join(patchList, ",") + "]"
 		}
@@ -267,8 +281,13 @@ func handleNamespace(app *application, w http.ResponseWriter,
 
 	name := ns.GetObjectMeta().GetName()
 
-	patchList := namespaceAddLabels(name, ns.ObjectMeta.Labels,
-		app.rules.NamespacesAddLabels)
+	var patchList []string
+
+	for _, r := range app.rules.Rules {
+		patchList = namespaceAddLabels(name, ns.ObjectMeta.Labels,
+			r.NamespacesAddLabels)
+	}
+
 	if len(patchList) > 0 {
 		patch = "[" + strings.Join(patchList, ",") + "]"
 	}

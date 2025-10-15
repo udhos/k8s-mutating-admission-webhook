@@ -75,7 +75,8 @@ var daemonsetTestTable = []daemonsetTestCase{
 }
 
 const matchAnyDaemonset = `
-disable_daemonsets:
+rules:
+- disable_daemonsets:
   - namespace: ""
     name: ""
     #labels:
@@ -85,7 +86,8 @@ disable_daemonsets:
 `
 
 const matchNoDaemonset = `
-disable_daemonsets:
+rules:
+- disable_daemonsets:
   - namespace: _
     name: ""
     #labels:
@@ -95,7 +97,8 @@ disable_daemonsets:
 `
 
 const matchAnyDaemonsetPutDefaultNS = `
-disable_daemonsets:
+rules:
+- disable_daemonsets:
   - namespace: ""
     name: ""
     #labels:
@@ -103,7 +106,8 @@ disable_daemonsets:
 `
 
 const matchName = `
-disable_daemonsets:
+rules:
+- disable_daemonsets:
   - namespace: ""
     name: ds2
     #labels:
@@ -111,7 +115,8 @@ disable_daemonsets:
 `
 
 const matchNameRegexp = `
-disable_daemonsets:
+rules:
+- disable_daemonsets:
   - namespace: ""
     name: ^ds2$
     #labels:
@@ -125,7 +130,8 @@ func TestDaemonset(t *testing.T) {
 			i, len(daemonsetTestTable), data.name)
 
 		t.Run(name, func(t *testing.T) {
-			r, errRule := newRules([]byte(data.rules))
+
+			ruleList, errRule := newRules([]byte(data.rules))
 			if errRule != nil {
 				t.Errorf("bad rule: %v", errRule)
 			}
@@ -136,6 +142,16 @@ func TestDaemonset(t *testing.T) {
 				if errLab != nil {
 					t.Errorf("bad pod labels: %v", errLab)
 				}
+			}
+
+			var r rulesConfig
+			if data.rules != "" {
+				if len(ruleList.Rules) != 1 {
+					t.Fatalf("bad number of rules (should be 1): %d",
+						len(ruleList.Rules))
+					return
+				}
+				r = ruleList.Rules[0]
 			}
 
 			list := daemonsetNodeSelector(data.namespace, data.dsName, dsLabels, r.DisableDaemonsets)

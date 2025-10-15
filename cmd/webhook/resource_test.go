@@ -263,7 +263,8 @@ var resourceTestTable = []resourceTestCase{
 }
 
 const ruleMatchNothing = `
-resources:
+rules:
+- resources:
   - pod:
       namespace: _ # match NOTHING
       name: "" # match anything
@@ -273,7 +274,8 @@ resources:
 `
 
 const ruleMatchAllButDontChange = `
-resources:
+rules:
+- resources:
   - pod:
       namespace: "" # match anything
       name: "" # match anything
@@ -283,7 +285,8 @@ resources:
 `
 
 const ruleSetAllResources = `
-resources:
+rules:
+- resources:
   - pod:
       namespace: "" # match anything
       name: "" # match anything
@@ -302,7 +305,8 @@ resources:
 `
 
 const ruleSetAllResourcesOnSecondRule = `
-resources:
+rules:
+- resources:
   - pod:
       namespace: _ # match NOTHING
     memory:
@@ -332,7 +336,8 @@ resources:
 `
 
 const ruleSetAllResourcesOnFirstRule = `
-resources:
+rules:
+- resources:
   - pod:
       namespace: "" # match anything
       name: "" # match anything
@@ -369,7 +374,7 @@ func TestAddResource(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 
-			r, errRule := newRules([]byte(data.rules))
+			ruleList, errRule := newRules([]byte(data.rules))
 			if errRule != nil {
 				t.Errorf("bad rule: %v", errRule)
 				return
@@ -379,6 +384,17 @@ func TestAddResource(t *testing.T) {
 			var containerList []v1.Container
 			for _, c := range data.containers {
 				containerList = append(containerList, c.container)
+			}
+
+			var r rulesConfig
+
+			if data.rules != "" {
+				if len(ruleList.Rules) != 1 {
+					t.Fatalf("bad number of rules (should be 1): %d",
+						len(ruleList.Rules))
+					return
+				}
+				r = ruleList.Rules[0]
 			}
 
 			const debug = false

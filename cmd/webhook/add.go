@@ -8,6 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// addPlacement adds tolerations, nodeSelector, priorityClass, container env vars.
 func addPlacement(namespace, podName, priorityClassName string,
 	priority *int32,
 	podLabels map[string]string,

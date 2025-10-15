@@ -51,7 +51,8 @@ func TestLabels(t *testing.T) {
 func TestRulesPlacePods(t *testing.T) {
 
 	const input = `
-place_pods:
+rules:
+- place_pods:
   - pods:
       - namespace: ""
     add:
@@ -59,10 +60,17 @@ place_pods:
         node: alpha
 `
 
-	r, errInput := newRules([]byte(input))
+	list, errInput := newRules([]byte(input))
 	if errInput != nil {
 		t.Errorf("input: %v", errInput)
 	}
+
+	if len(list.Rules) != 1 {
+		t.Fatalf("bad number of rules (should be 1): %d",
+			len(list.Rules))
+	}
+
+	r := list.Rules[0]
 
 	if len(r.PlacePods) != 1 {
 		t.Errorf("bad number of place pods rules (should be 1): %d",

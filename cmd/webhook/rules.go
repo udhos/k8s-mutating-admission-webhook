@@ -9,6 +9,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+type rulesList struct {
+	Rules []rulesConfig `yaml:"rules"`
+}
+
 type rulesConfig struct {
 	RestrictTolerations []restrictTolerationConfig `yaml:"restrict_tolerations"`
 	PlacePods           []placementConfig          `yaml:"place_pods"`
@@ -165,112 +169,115 @@ func matchLabelValue(existing, required string) bool {
 	return pat.matchString(existing)
 }
 
-func loadRules(path string) (rulesConfig, error) {
+func loadRules(path string) (rulesList, error) {
 	data, errRead := os.ReadFile(path)
 	if errRead != nil {
-		return rulesConfig{}, errRead
+		return rulesList{}, errRead
 	}
 	return newRules(data)
 }
 
-func newRules(data []byte) (rulesConfig, error) {
-	var r rulesConfig
+func newRules(data []byte) (rulesList, error) {
+	var list rulesList
 
-	if errYaml := yaml.Unmarshal(data, &r); errYaml != nil {
-		return r, errYaml
+	if errYaml := yaml.Unmarshal(data, &list); errYaml != nil {
+		return list, errYaml
 	}
 
-	for i := range r.RestrictTolerations {
+	for _, r := range list.Rules {
 
-		{
-			key, errKey := patternCompile(r.RestrictTolerations[i].Toleration.Key)
-			if errKey != nil {
-				return r, errKey
+		for i := range r.RestrictTolerations {
+
+			{
+				key, errKey := patternCompile(r.RestrictTolerations[i].Toleration.Key)
+				if errKey != nil {
+					return list, errKey
+				}
+				r.RestrictTolerations[i].Toleration.key = key
 			}
-			r.RestrictTolerations[i].Toleration.key = key
+
+			{
+				op, errOp := patternCompile(r.RestrictTolerations[i].Toleration.Operator)
+				if errOp != nil {
+					return list, errOp
+				}
+				r.RestrictTolerations[i].Toleration.operator = op
+			}
+
+			{
+				v, errV := patternCompile(r.RestrictTolerations[i].Toleration.Value)
+				if errV != nil {
+					return list, errV
+				}
+				r.RestrictTolerations[i].Toleration.value = v
+			}
+
+			{
+				eff, errEff := patternCompile(r.RestrictTolerations[i].Toleration.Effect)
+				if errEff != nil {
+					return list, errEff
+				}
+				r.RestrictTolerations[i].Toleration.effect = eff
+			}
+
+			for j := range r.RestrictTolerations[i].AllowedPods {
+
+				p, errCompile := compilePod(r.RestrictTolerations[i].AllowedPods[j])
+				if errCompile != nil {
+					return list, errCompile
+				}
+
+				r.RestrictTolerations[i].AllowedPods[j] = p
+			}
 		}
 
-		{
-			op, errOp := patternCompile(r.RestrictTolerations[i].Toleration.Operator)
-			if errOp != nil {
-				return r, errOp
+		for i := range r.PlacePods {
+
+			for j := range r.PlacePods[i].Pods {
+
+				p, errCompile := compilePod(r.PlacePods[i].Pods[j])
+				if errCompile != nil {
+					return list, errCompile
+				}
+
+				r.PlacePods[i].Pods[j] = p
 			}
-			r.RestrictTolerations[i].Toleration.operator = op
+
 		}
 
-		{
-			v, errV := patternCompile(r.RestrictTolerations[i].Toleration.Value)
-			if errV != nil {
-				return r, errV
-			}
-			r.RestrictTolerations[i].Toleration.value = v
-		}
+		for i := range r.Resources {
 
-		{
-			eff, errEff := patternCompile(r.RestrictTolerations[i].Toleration.Effect)
-			if errEff != nil {
-				return r, errEff
-			}
-			r.RestrictTolerations[i].Toleration.effect = eff
-		}
-
-		for j := range r.RestrictTolerations[i].AllowedPods {
-
-			p, errCompile := compilePod(r.RestrictTolerations[i].AllowedPods[j])
+			p, errCompile := compilePod(r.Resources[i].Pod)
 			if errCompile != nil {
-				return r, errCompile
+				return list, errCompile
 			}
+			r.Resources[i].Pod = p
 
-			r.RestrictTolerations[i].AllowedPods[j] = p
+			c, errC := patternCompile(r.Resources[i].Container)
+			if errC != nil {
+				return list, errC
+			}
+			r.Resources[i].container = c
 		}
-	}
 
-	for i := range r.PlacePods {
-
-		for j := range r.PlacePods[i].Pods {
-
-			p, errCompile := compilePod(r.PlacePods[i].Pods[j])
+		for i := range r.DisableDaemonsets {
+			ds, errCompile := compileDaemonset(r.DisableDaemonsets[i])
 			if errCompile != nil {
-				return r, errCompile
+				return list, errCompile
 			}
+			r.DisableDaemonsets[i] = ds
+		}
 
-			r.PlacePods[i].Pods[j] = p
+		for i := range r.NamespacesAddLabels {
+			ns, errCompile := compileNamespace(r.NamespacesAddLabels[i])
+			if errCompile != nil {
+				return list, errCompile
+			}
+			r.NamespacesAddLabels[i] = ns
 		}
 
 	}
-
-	for i := range r.Resources {
-
-		p, errCompile := compilePod(r.Resources[i].Pod)
-		if errCompile != nil {
-			return r, errCompile
-		}
-		r.Resources[i].Pod = p
-
-		c, errC := patternCompile(r.Resources[i].Container)
-		if errC != nil {
-			return r, errC
-		}
-		r.Resources[i].container = c
-	}
-
-	for i := range r.DisableDaemonsets {
-		ds, errCompile := compileDaemonset(r.DisableDaemonsets[i])
-		if errCompile != nil {
-			return r, errCompile
-		}
-		r.DisableDaemonsets[i] = ds
-	}
-
-	for i := range r.NamespacesAddLabels {
-		ns, errCompile := compileNamespace(r.NamespacesAddLabels[i])
-		if errCompile != nil {
-			return r, errCompile
-		}
-		r.NamespacesAddLabels[i] = ns
-	}
-
-	return r, nil
+	return list, nil
 }
 
 func compilePod(p podConfig) (podConfig, error) {

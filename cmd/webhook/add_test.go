@@ -21,35 +21,39 @@ type placePodsTestCase struct {
 }
 
 const placeRulesMissingMatch = `
-place_pods:
-  - add:
-      node_selector:
-        node: alpha
+rules:
+    - place_pods:
+        - add:
+            node_selector:
+                node: alpha
 `
 
 const placeRulesMatchAll1 = `
-place_pods:
-  - pods:
-      - namespace: ""
-    add:
-      node_selector:
-        node: alpha
+rules:
+    - place_pods:
+        - pods:
+            - namespace: ""
+          add:
+            node_selector:
+              node: alpha
 `
 
 const placeRulesMatchAll2 = `
-place_pods:
-  - pods:
-      - namespace: ""
-    add:
-      tolerations:
-        - key: key1
-          operator: Equal
-          value: value1
-          effect: NoSchedule
+rules:
+    - place_pods:
+        - pods:
+            - namespace: ""
+          add:
+            tolerations:
+                - key: key1
+                  operator: Equal
+                  value: value1
+                  effect: NoSchedule
 `
 
 const placeRulesMatchAll3 = `
-place_pods:
+rules:
+- place_pods:
   - pods:
       - namespace: ""
     add:
@@ -63,7 +67,8 @@ place_pods:
 `
 
 const placeRulesColorLabels = `
-place_pods:
+rules:
+- place_pods:
   - pods:
       - labels:
           color: red
@@ -83,7 +88,8 @@ place_pods:
 `
 
 const placeRulesHasJobLabel = `
-place_pods:
+rules:
+- place_pods:
   - pods:
       - labels:
           batch.kubernetes.io/job-name: "regexp="
@@ -98,7 +104,8 @@ place_pods:
 `
 
 const placeRulesHasJobLabelValue = `
-place_pods:
+rules:
+- place_pods:
   - pods:
       - labels:
           batch.kubernetes.io/job-name: "regexp=^test$"
@@ -113,7 +120,8 @@ place_pods:
 `
 
 const placeRulesEnv = `
-place_pods:
+rules:
+- place_pods:
   - pods:
       - namespace: ""
     add:
@@ -133,7 +141,8 @@ place_pods:
 `
 
 const placePriorityClass = `
-place_pods:
+rules:
+- place_pods:
   - pods:
       - has_priority_class_name: ^$ # match empty priority class name
         namespace: ""               # match any namespace
@@ -144,6 +153,27 @@ place_pods:
         namespace: ""                         # match any namespace
     add:
       priority_class_name: low
+`
+
+const placeMultirule = `
+rules:
+
+# rule 1 adds priority
+
+- place_pods:
+  - add:
+      priority_class_name: low
+    pods:
+      - namespace: ""
+
+# rule 2 adds node selector
+
+- place_pods:
+  - add:
+      node_selector:
+        node: alpha
+    pods:
+      - namespace: ""
 `
 
 var placePodsTestTable = []placePodsTestCase{
@@ -340,6 +370,14 @@ var placePodsTestTable = []placePodsTestCase{
 		priority:          &priority,
 		expected:          `[{"op":"add","path":"/spec/priorityClassName","value":"low"} {"op":"remove","path":"/spec/priority"}]`,
 	},
+	{
+		testName:          "multirule place",
+		rules:             placeMultirule,
+		namespace:         "default",
+		podName:           "pod-1",
+		priorityClassName: "other",
+		expected:          `[{"op":"add","path":"/spec/priorityClassName","value":"low"} {"op":"add","path":"/spec/nodeSelector","value":{"node":"alpha"}}]`,
+	},
 }
 
 var priority int32 = 500
@@ -348,9 +386,10 @@ var priority int32 = 500
 func TestPlacePods(t *testing.T) {
 
 	for i, data := range placePodsTestTable {
-		testLabel := fmt.Sprintf("%d: %s:", i, data.testName)
+		testLabel := fmt.Sprintf("%d of %d: %s:", i+1,
+			len(placePodsTestTable), data.testName)
 
-		r, errRule := newRules([]byte(data.rules))
+		ruleList, errRule := newRules([]byte(data.rules))
 		if errRule != nil {
 			t.Errorf("%s bad rule: %v", testLabel, errRule)
 		}
@@ -359,13 +398,24 @@ func TestPlacePods(t *testing.T) {
 		if data.podLabels != "" {
 			errLab := json.Unmarshal([]byte(data.podLabels), &podLabels)
 			if errLab != nil {
-				t.Errorf("%s bad pod labels: %v", testLabel, errLab)
+				t.Fatalf("%s bad pod labels: %v", testLabel, errLab)
 			}
 		}
 
-		list := addPlacement(data.namespace, data.podName,
-			data.priorityClassName, data.priority, podLabels, data.containers,
-			r.PlacePods)
+		if data.rules != "" {
+			if len(ruleList.Rules) < 1 {
+				t.Fatalf("%s bad number of rules (should be >= 1): %d",
+					testLabel, len(ruleList.Rules))
+			}
+		}
+
+		var list []string
+
+		for _, r := range ruleList.Rules {
+			list = append(list, addPlacement(data.namespace, data.podName,
+				data.priorityClassName, data.priority, podLabels, data.containers,
+				r.PlacePods)...)
+		}
 
 		result := fmt.Sprintf("%v", list)
 

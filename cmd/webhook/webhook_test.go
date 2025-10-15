@@ -39,7 +39,8 @@ const tolerationsExists = `[
         ]`
 
 const rulesRejectKey2 = `
-restrict_tolerations:
+rules:
+- restrict_tolerations:
     - toleration:
         # match key2
         key: ^key2$
@@ -53,7 +54,8 @@ restrict_tolerations:
 `
 
 const rulesRejectAll = `
-restrict_tolerations:
+rules:
+- restrict_tolerations:
   - toleration:
       # match any toleration
       #key: ""        # empty string matches anything
@@ -67,7 +69,8 @@ restrict_tolerations:
 `
 
 const rulesRejectOnlyExists = `
-restrict_tolerations:
+rules:
+- restrict_tolerations:
   - toleration:
       # match only Exists
       key: ^$               # match only the empty string
@@ -81,7 +84,8 @@ restrict_tolerations:
 `
 
 const rulesOnlyPodDaemonSetCanHaveExactlyExists = `
-restrict_tolerations:
+rules:
+- restrict_tolerations:
   - toleration:
       # match only Exists
       key: ^$               # match only the empty string
@@ -98,7 +102,8 @@ restrict_tolerations:
 `
 
 const rulesOnlyPodDaemonSetCanHaveExactlyExistsWithAnd = `
-restrict_tolerations:
+rules:
+- restrict_tolerations:
   - toleration:
       # match only Exists
       key: ^$               # match only the empty string
@@ -119,7 +124,8 @@ restrict_tolerations:
 `
 
 const rulesPodLabelCanHaveKey2 = `
-restrict_tolerations:
+rules:
+- restrict_tolerations:
     - toleration:
         # match key2
         key: ^key2$
@@ -263,7 +269,7 @@ func TestRestrictTolerations(t *testing.T) {
 	for i, data := range tolerationTestTable {
 		testLabel := fmt.Sprintf("%d: %s:", i, data.testName)
 
-		r, errRule := newRules([]byte(data.rules))
+		ruleList, errRule := newRules([]byte(data.rules))
 		if errRule != nil {
 			t.Errorf("%s bad rule: %v", testLabel, errRule)
 		}
@@ -282,6 +288,17 @@ func TestRestrictTolerations(t *testing.T) {
 			}
 		}
 
+		var r rulesConfig
+
+		if data.rules != "" {
+			if len(ruleList.Rules) != 1 {
+				t.Fatalf("%s bad number of rules (should be 1): %d",
+					testLabel, len(ruleList.Rules))
+				continue
+			}
+			r = ruleList.Rules[0]
+		}
+
 		list := removeTolerationsIndices(data.namespace, data.podName,
 			data.priorityClassName, podLabels, podTolerations,
 			r.RestrictTolerations)
@@ -292,6 +309,7 @@ func TestRestrictTolerations(t *testing.T) {
 			t.Errorf("%s bad removal indices: got=%s expected=%s",
 				testLabel, str, data.expectedIndices)
 		}
+
 	}
 }
 

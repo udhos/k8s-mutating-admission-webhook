@@ -11,7 +11,9 @@
 # place_pods[].pod.namespace
 # place_pods[].pod.name
 
-restrict_tolerations:
+rules:
+
+- restrict_tolerations:
 
   # if a toleration is unmatched, it is allowed for all PODs.
   # if a toleration is matched, only matched PODs can have it.
@@ -49,7 +51,7 @@ restrict_tolerations:
 # it will receive tolerations and node_selectors
 # only from the FIRST matching rule.
 
-place_pods:
+- place_pods:
   - pods:
       - labels:
           color: red
@@ -116,7 +118,7 @@ place_pods:
       priority_class_name: low
 
 
-resources:
+- resources:
   - pod:
       namespace: "" # match anything
       name: "" # match anything
@@ -133,13 +135,13 @@ resources:
       requests: 222M
       limits:   333M
 
-disable_daemonsets:
+- disable_daemonsets:
   - namespace: "" # match anything
     name: ^ds2$   # match daemonset name
     #labels:
     #  a: b
 
-namespaces_add_labels:
+- namespaces_add_labels:
   - name: ^default$
     add_labels:
       istio-injection: enabled

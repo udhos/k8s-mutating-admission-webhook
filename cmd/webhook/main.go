@@ -25,7 +25,7 @@ func getVersion(me string) string {
 type application struct {
 	codecs serializer.CodecFactory
 	conf   config
-	rules  rulesConfig
+	rules  rulesList
 }
 
 func main() {

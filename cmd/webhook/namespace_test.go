@@ -68,21 +68,24 @@ var namespaceTestTable = []namespaceTestCase{
 }
 
 const nsMatchAnyNamespace = `
-namespaces_add_labels:
+rules:
+- namespaces_add_labels:
   - name: ""
     add_labels:
       istio-injection: enabled
 `
 
 const nsMatchNoNamespace = `
-namespaces_add_labels:
+rules:
+- namespaces_add_labels:
   - name: _
     add_labels:
       istio-injection: enabled
 `
 
 const nsMatchName = `
-namespaces_add_labels:
+rules:
+- namespaces_add_labels:
   - name: default
     add_labels:
       istio-injection: enabled
@@ -92,7 +95,8 @@ namespaces_add_labels:
 `
 
 const nsMatchNameRegexp = `
-namespaces_add_labels:
+rules:
+- namespaces_add_labels:
   - name: default
     add_labels:
       istio-injection: enabled
@@ -109,7 +113,8 @@ func TestNamespace(t *testing.T) {
 			i, len(namespaceTestTable), data.testName)
 
 		t.Run(name, func(t *testing.T) {
-			r, errRule := newRules([]byte(data.rules))
+
+			ruleList, errRule := newRules([]byte(data.rules))
 			if errRule != nil {
 				t.Errorf("bad rule: %v", errRule)
 			}
@@ -120,6 +125,16 @@ func TestNamespace(t *testing.T) {
 				if errLab != nil {
 					t.Errorf("bad pod labels: %v", errLab)
 				}
+			}
+
+			var r rulesConfig
+			if data.rules != "" {
+				if len(ruleList.Rules) != 1 {
+					t.Fatalf("bad number of rules (should be 1): %d",
+						len(ruleList.Rules))
+					return
+				}
+				r = ruleList.Rules[0]
 			}
 
 			list := namespaceAddLabels(data.name, labels, r.NamespacesAddLabels)
