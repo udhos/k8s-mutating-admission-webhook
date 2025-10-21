@@ -38,11 +38,11 @@ func addOne(namespace, podName, priorityClassName string, priority *int32,
 	var list []string
 
 	for _, tol := range add.Tolerations {
-		list = append(list, addToleration(tol))
+		list = append(list, addToleration(namespace, podName, tol))
 	}
 
 	if len(add.NodeSelector) > 0 {
-		ns, errNs := addNodeSelector(add.NodeSelector)
+		ns, errNs := addNodeSelector(namespace, podName, add.NodeSelector)
 		if errNs != nil {
 			log.Printf("ERROR: addOne: %v", errNs)
 			return list
@@ -145,16 +145,23 @@ func addContainerEnv(namespace, podName string, containers []corev1.Container,
 	return list
 }
 
-func addToleration(tol tolerationConfig) string {
+func addToleration(namespace, podName string, tol tolerationConfig) string {
+	log.Printf("addToleration: ns=%s pod=%s: %s", namespace, podName,
+		tolerationFieldsToString(tol.Key, tol.Operator, tol.Value, tol.Effect))
+
 	return fmt.Sprintf(`{"op":"add","path":"/spec/tolerations/-","value":{"key":"%s","operator":"%s","effect":"%s","value":"%s"}}`,
 		tol.Key, tol.Operator, tol.Effect, tol.Value)
 }
 
-func addNodeSelector(nodeSelector map[string]string) (string, error) {
+func addNodeSelector(namespace, podName string, nodeSelector map[string]string) (string, error) {
+
 	value, errJSON := labelsToJSONString(nodeSelector)
 	if errJSON != nil {
 		return "", fmt.Errorf("addNodeSelector: %v", errJSON)
 	}
+
+	log.Printf("addNodeSelector: ns=%s pod=%s: %s", namespace, podName, value)
+
 	return fmt.Sprintf(`{"op":"add","path":"/spec/nodeSelector","value":%s}`,
 		value), nil
 }

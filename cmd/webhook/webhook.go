@@ -327,11 +327,18 @@ func handleNamespace(app *application, w http.ResponseWriter,
 }
 
 func tolerationToString(podToleration corev1.Toleration) string {
-	return fmt.Sprintf("key(%s) op(%s) value(%s) effect(%s)",
-		podToleration.Key,
-		podToleration.Operator,
+	return tolerationFieldsToString(podToleration.Key,
+		string(podToleration.Operator),
 		podToleration.Value,
-		podToleration.Effect)
+		string(podToleration.Effect))
+}
+
+func tolerationFieldsToString(key, operator, value, effect string) string {
+	return fmt.Sprintf("key(%s) op(%s) value(%s) effect(%s)",
+		key,
+		operator,
+		value,
+		effect)
 }
 
 // https://jsonpatch.com/#json-pointer
