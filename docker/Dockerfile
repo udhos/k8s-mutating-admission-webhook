@@ -1,7 +1,7 @@
 # STEP 1 build executable binary
 
 #FROM golang:alpine as builder
-FROM golang:1.25.3-alpine3.22 AS builder
+FROM golang:1.25.4-alpine3.22 AS builder
 
 RUN apk update
 RUN apk add git

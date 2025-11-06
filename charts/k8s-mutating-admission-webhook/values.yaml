@@ -24,6 +24,13 @@ fullnameOverride: ""
 #
 redeploy: always
 
+# this strategy prevents from running more than 1 pod
+strategy:
+  rollingUpdate:
+    maxSurge: 0
+    maxUnavailable: 1
+  type: RollingUpdate
+
 priorityClassName: system-node-critical
 
 podAnnotations: {}

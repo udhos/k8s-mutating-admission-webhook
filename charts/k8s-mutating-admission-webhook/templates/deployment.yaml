@@ -6,6 +6,8 @@ metadata:
     {{- include "k8s-mutating-admission-webhook.labels" . | nindent 4 }}
 spec:
   replicas: 1
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
   selector:
     matchLabels:
       {{- include "k8s-mutating-admission-webhook.selectorLabels" . | nindent 6 }}
