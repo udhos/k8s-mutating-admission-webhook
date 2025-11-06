@@ -12,6 +12,7 @@ import (
 	"runtime"
 
 	_ "github.com/KimMachineGun/automemlimit"
+	"github.com/udhos/kube/kubeclient"
 	"gopkg.in/yaml.v3"
 	api_runtime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -93,14 +94,37 @@ func main() {
 	}
 
 	//
+	// Create kube client
+	//
+	options := kubeclient.Options{
+		DebugLog: true,
+	}
+	clientset, errClient := kubeclient.New(options)
+	if errClient != nil {
+		log.Fatalf("Failed to create kube client: %v", errClient)
+	}
+
+	//
 	// Add certificate to webhook configuration
 	//
 
-	errWebhookConf := createOrUpdateMutatingWebhookConfiguration(caPEM, webhookConfigName, app.conf.route,
-		webhookServiceName, webhookNamespace, app.conf.failurePolicy, app.conf.namespaceExcludeLabel,
-		app.conf.reinvocationPolicy)
+	caPEMBytes := caPEM.Bytes()
+
+	errWebhookConf := createOrUpdateMutatingWebhookConfiguration(clientset,
+		caPEMBytes, webhookConfigName, app.conf.route, webhookServiceName,
+		webhookNamespace, app.conf.failurePolicy,
+		app.conf.namespaceExcludeLabel, app.conf.reinvocationPolicy)
 	if errWebhookConf != nil {
 		log.Fatalf("Failed to create or update the mutating webhook configuration: %v", errWebhookConf)
+	}
+
+	//
+	// Spawn certificate auto-check
+	//
+
+	if app.conf.certAutocheck {
+		go certAutocheck(clientset, caPEMBytes, webhookConfigName,
+			app.conf.certAutocheckInterval, app.conf.certAutocheckErrorLimit)
 	}
 
 	//

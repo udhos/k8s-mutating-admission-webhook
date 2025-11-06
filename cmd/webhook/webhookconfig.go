@@ -1,30 +1,22 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"log"
 	"reflect"
 
-	"github.com/udhos/kube/kubeclient"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
-func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConfigName,
+func createOrUpdateMutatingWebhookConfiguration(clientset *kubernetes.Clientset,
+	caPEM []byte, webhookConfigName,
 	webhookPath, webhookService, webhookNamespace, failurePolicy,
 	namespaceExcludeLabel, reinvocationPolicy string) error {
 
 	log.Println("Initializing the kube client...")
-
-	options := kubeclient.Options{
-		DebugLog: true,
-	}
-	clientset, errClient := kubeclient.New(options)
-	if errClient != nil {
-		return errClient
-	}
 
 	mutatingWebhookConfigV1Client := clientset.AdmissionregistrationV1()
 
@@ -44,7 +36,7 @@ func createOrUpdateMutatingWebhookConfiguration(caPEM *bytes.Buffer, webhookConf
 			AdmissionReviewVersions: []string{"v1", "v1beta1"},
 			SideEffects:             &sideEffect,
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				CABundle: caPEM.Bytes(), // self-generated CA for the webhook
+				CABundle: caPEM, // self-generated CA for the webhook
 				Service: &admissionregistrationv1.ServiceReference{
 					Name:      webhookService,
 					Namespace: webhookNamespace,

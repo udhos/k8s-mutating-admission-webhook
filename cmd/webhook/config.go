@@ -6,18 +6,22 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type config struct {
-	debug                 bool
-	addr                  string
-	route                 string
-	health                string
-	namespace             string
-	service               string
-	webhookConfigName     string
-	namespaceExcludeLabel string
-	certDurationYears     int
+	debug                   bool
+	addr                    string
+	route                   string
+	health                  string
+	namespace               string
+	service                 string
+	webhookConfigName       string
+	namespaceExcludeLabel   string
+	certDurationYears       int
+	certAutocheck           bool
+	certAutocheckInterval   time.Duration
+	certAutocheckErrorLimit int
 
 	// Ignore: means that an error calling the webhook is ignored and the API request is allowed to continue.
 	// Fail: means that an error calling the webhook causes the admission to fail and the API request to be rejected.
@@ -32,17 +36,20 @@ type config struct {
 
 func getConfig() config {
 	return config{
-		debug:                 envBool("DEBUG", false),
-		addr:                  envString("ADDR", ":8443"),
-		route:                 envString("ROUTE", "/mutate"),
-		health:                envString("HEALTH", "/health"),
-		namespace:             envString("NAMESPACE", "webhook"),
-		service:               envString("SERVICE", "k8s-mutating-admission-webhook"),
-		webhookConfigName:     envString("WEBHOOK_CONFIG_NAME", "udhos.github.io"),
-		namespaceExcludeLabel: envString("NAMESPACE_EXCLUDE_LABEL", "webhook"),
-		certDurationYears:     envInt("CERT_DURATION_YEARS", 10),
-		failurePolicy:         envString("FAILURE_POLICY", "Ignore"),
-		reinvocationPolicy:    envString("REINVOCATION_POLICY", "IfNeeded"),
+		debug:                   envBool("DEBUG", false),
+		addr:                    envString("ADDR", ":8443"),
+		route:                   envString("ROUTE", "/mutate"),
+		health:                  envString("HEALTH", "/health"),
+		namespace:               envString("NAMESPACE", "webhook"),
+		service:                 envString("SERVICE", "k8s-mutating-admission-webhook"),
+		webhookConfigName:       envString("WEBHOOK_CONFIG_NAME", "udhos.github.io"),
+		namespaceExcludeLabel:   envString("NAMESPACE_EXCLUDE_LABEL", "webhook"),
+		certDurationYears:       envInt("CERT_DURATION_YEARS", 10),
+		certAutocheck:           envBool("CERT_AUTOCHECK", true),
+		certAutocheckInterval:   envDuration("CERT_AUTOCHECK_INTERVAL", 10*time.Second),
+		certAutocheckErrorLimit: envInt("CERT_AUTOCHECK_ERROR_LIMIT", 3),
+		failurePolicy:           envString("FAILURE_POLICY", "Ignore"),
+		reinvocationPolicy:      envString("REINVOCATION_POLICY", "IfNeeded"),
 
 		// space-separated list of namespaces
 		ignoreNamespaces: strings.Fields(envString("IGNORE_NAMESPACES", "karpenter")),
@@ -102,6 +109,23 @@ func envInt(name string, defaultValue int) int {
 
 			log.Printf("%s=[%s] using %s=%d default=%d", name, str, name, value, defaultValue)
 			return int(value)
+		}
+		log.Printf("bad %s=[%s]: error: %v", name, str, errConv)
+	}
+	log.Printf("%s=[%s] using %s=%d default=%d", name, str, name, defaultValue, defaultValue)
+	return defaultValue
+}
+
+// envDuration extracts Duration from env var.
+// It returns the provided defaultValue if the env var is empty.
+// The value returned is also recorded in logs.
+func envDuration(name string, defaultValue time.Duration) time.Duration {
+	str := os.Getenv(name)
+	if str != "" {
+		value, errConv := time.ParseDuration(str)
+		if errConv == nil {
+			log.Printf("%s=[%s] using %s=%d default=%d", name, str, name, value, defaultValue)
+			return value
 		}
 		log.Printf("bad %s=[%s]: error: %v", name, str, errConv)
 	}
