@@ -124,11 +124,11 @@ func envDuration(name string, defaultValue time.Duration) time.Duration {
 	if str != "" {
 		value, errConv := time.ParseDuration(str)
 		if errConv == nil {
-			log.Printf("%s=[%s] using %s=%d default=%d", name, str, name, value, defaultValue)
+			log.Printf("%s=[%s] using %s=%v default=%v", name, str, name, value, defaultValue)
 			return value
 		}
 		log.Printf("bad %s=[%s]: error: %v", name, str, errConv)
 	}
-	log.Printf("%s=[%s] using %s=%d default=%d", name, str, name, defaultValue, defaultValue)
+	log.Printf("%s=[%s] using %s=%v default=%v", name, str, name, defaultValue, defaultValue)
 	return defaultValue
 }
