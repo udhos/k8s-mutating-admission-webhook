@@ -16,8 +16,6 @@ func createOrUpdateMutatingWebhookConfiguration(clientset *kubernetes.Clientset,
 	webhookPath, webhookService, webhookNamespace, failurePolicy,
 	namespaceExcludeLabel, reinvocationPolicy string) error {
 
-	log.Println("Initializing the kube client...")
-
 	mutatingWebhookConfigV1Client := clientset.AdmissionregistrationV1()
 
 	log.Printf("Creating or updating the mutatingwebhookconfiguration: %s",
