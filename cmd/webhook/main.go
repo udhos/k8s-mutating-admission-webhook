@@ -88,7 +88,7 @@ func main() {
 		log.Fatalf("Failed to generate ca and certificate key pair: %v", errCert)
 	}
 
-	pair, errPair := tls.X509KeyPair(certPEM.Bytes(), certKeyPEM.Bytes())
+	pair, errPair := tls.X509KeyPair(certPEM, certKeyPEM)
 	if errPair != nil {
 		log.Fatalf("Failed to load certificate key pair: %v", errPair)
 	}
@@ -108,10 +108,8 @@ func main() {
 	// Add certificate to webhook configuration
 	//
 
-	caPEMBytes := caPEM.Bytes()
-
 	errWebhookConf := createOrUpdateMutatingWebhookConfiguration(clientset,
-		caPEMBytes, webhookConfigName, app.conf.route, webhookServiceName,
+		caPEM, webhookConfigName, app.conf.route, webhookServiceName,
 		webhookNamespace, app.conf.failurePolicy,
 		app.conf.namespaceExcludeLabel, app.conf.reinvocationPolicy)
 	if errWebhookConf != nil {
@@ -123,7 +121,7 @@ func main() {
 	//
 
 	if app.conf.certAutocheck {
-		go certAutocheck(clientset, caPEMBytes, webhookConfigName,
+		go certAutocheck(clientset, caPEM, webhookConfigName,
 			app.conf.certAutocheckInterval, app.conf.certAutocheckErrorLimit)
 	}
 

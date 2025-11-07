@@ -15,7 +15,7 @@ import (
 // and sign certificate with the CA for given common name and dns names
 // it resurns the CA, certificate and private key in PEM format
 func generateCert(orgs, dnsNames []string, commonName string,
-	certDurationInYears int) (*bytes.Buffer, *bytes.Buffer, *bytes.Buffer, error) {
+	certDurationInYears int) ([]byte, []byte, []byte, error) {
 	// init CA config
 	ca := &x509.Certificate{
 		SerialNumber:          big.NewInt(2022),
@@ -75,17 +75,21 @@ func generateCert(orgs, dnsNames []string, commonName string,
 
 	// new certificate with PEM encoded
 	newCertPEM := new(bytes.Buffer)
-	_ = pem.Encode(newCertPEM, &pem.Block{
+	if err := pem.Encode(newCertPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: newCertBytes,
-	})
+	}); err != nil {
+		return nil, nil, nil, err
+	}
 
 	// new private key with PEM encoded
 	newPrivateKeyPEM := new(bytes.Buffer)
-	_ = pem.Encode(newPrivateKeyPEM, &pem.Block{
+	if err := pem.Encode(newPrivateKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(newPrivateKey),
-	})
+	}); err != nil {
+		return nil, nil, nil, err
+	}
 
-	return caPEM, newCertPEM, newPrivateKeyPEM, nil
+	return caPEM.Bytes(), newCertPEM.Bytes(), newPrivateKeyPEM.Bytes(), nil
 }
