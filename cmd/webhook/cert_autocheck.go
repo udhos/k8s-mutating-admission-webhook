@@ -12,7 +12,7 @@ import (
 
 func certAutocheck(clientset *kubernetes.Clientset,
 	expectedCaPEM []byte, webhookConfigName string,
-	interval time.Duration, maxErrors int) {
+	interval time.Duration, maxErrors int, debug bool) {
 
 	const me = "certAutocheck"
 
@@ -57,7 +57,9 @@ func certAutocheck(clientset *kubernetes.Clientset,
 			continue
 		}
 
-		log.Printf("%s: webhook=%s: ok", me, webhookConfigName)
+		if debug {
+			log.Printf("%s: DEBUG webhook=%s: ok", me, webhookConfigName)
+		}
 
 		errors = 0 // reset errors
 	}

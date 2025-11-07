@@ -122,7 +122,8 @@ func main() {
 
 	if app.conf.certAutocheck {
 		go certAutocheck(clientset, caPEM, webhookConfigName,
-			app.conf.certAutocheckInterval, app.conf.certAutocheckErrorLimit)
+			app.conf.certAutocheckInterval, app.conf.certAutocheckErrorLimit,
+			app.conf.debug)
 	}
 
 	//

@@ -20,7 +20,8 @@ func createOrUpdateMutatingWebhookConfiguration(clientset *kubernetes.Clientset,
 
 	mutatingWebhookConfigV1Client := clientset.AdmissionregistrationV1()
 
-	log.Printf("Creating or updating the mutatingwebhookconfiguration: %s", webhookConfigName)
+	log.Printf("Creating or updating the mutatingwebhookconfiguration: %s",
+		webhookConfigName)
 
 	//fail := admissionregistrationv1.Fail
 	fp := admissionregistrationv1.FailurePolicyType(failurePolicy)
