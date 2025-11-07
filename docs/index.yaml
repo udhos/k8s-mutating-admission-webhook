@@ -2,6 +2,18 @@ apiVersion: v1
 entries:
   k8s-mutating-admission-webhook:
   - apiVersion: v2
+    appVersion: 1.12.2
+    created: "2025-11-07T18:27:54.37238132-03:00"
+    description: A Helm chart for k8s-mutating-admission-webhook
+    digest: 15803a30bd289faac263a5ab7ac65110c491c893bba78bc0645e8ffe86e9dd06
+    name: k8s-mutating-admission-webhook
+    sources:
+    - https://github.com/udhos/k8s-mutating-admission-webhook
+    type: application
+    urls:
+    - https://udhos.github.io/k8s-mutating-admission-webhook/k8s-mutating-admission-webhook-1.12.2.tgz
+    version: 1.12.2
+  - apiVersion: v2
     appVersion: 1.12.1
     created: "2025-11-07T17:10:37.734270996-03:00"
     description: A Helm chart for k8s-mutating-admission-webhook
@@ -541,4 +553,4 @@ entries:
     urls:
     - https://udhos.github.io/k8s-mutating-admission-webhook/k8s-mutating-admission-webhook-0.1.0.tgz
     version: 0.1.0
-generated: "2025-11-07T17:10:37.733677248-03:00"
+generated: "2025-11-07T18:27:54.371863368-03:00"
