@@ -7,6 +7,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type rulesList struct {
@@ -73,12 +74,22 @@ type podConfig struct {
 	Name                 string            `yaml:"name"`
 	HasPriorityClassName string            `yaml:"has_priority_class_name"`
 	Labels               map[string]string `yaml:"labels"`
+	HasOwnerReference    ownerReference    `yaml:"has_owner_reference"`
 
 	And []podConfig `yaml:"and"`
 
 	namespace            *pattern
 	name                 *pattern
 	hasPriorityClassName *pattern
+}
+
+type ownerReference struct {
+	APIVersion         string `yaml:"apiVersion"`
+	Kind               string `yaml:"kind"`
+	Name               string `yaml:"name"`
+	UID                string `yaml:"uid"`
+	Controller         *bool  `yaml:"controller"`
+	BlockOwnerDeletion *bool  `yaml:"blockOwnerDeletion"`
 }
 
 type placementConfig struct {
@@ -120,20 +131,25 @@ func (t *tolerationConfigPattern) match(podToleration corev1.Toleration) bool {
 }
 
 func (pc *placementConfig) match(namespace, podName, priorityClassName string,
-	podLabels map[string]string) bool {
+	podLabels map[string]string,
+	podOwnerReferences []metav1.OwnerReference) bool {
 	for _, podC := range pc.Pods {
-		if podC.match(namespace, podName, priorityClassName, podLabels) {
+		if podC.match(namespace, podName, priorityClassName, podLabels,
+			podOwnerReferences) {
 			return true
 		}
 	}
 	return false
 }
 
-func (p *podConfig) match(namespace, podName, priorityClassName string, podLabels map[string]string) bool {
+func (p *podConfig) match(namespace, podName, priorityClassName string,
+	podLabels map[string]string,
+	podOwnerReferences []metav1.OwnerReference) bool {
 
 	if len(p.And) > 0 {
 		for _, sub := range p.And {
-			if !sub.match(namespace, podName, priorityClassName, podLabels) {
+			if !sub.match(namespace, podName, priorityClassName, podLabels,
+				podOwnerReferences) {
 				return false
 			}
 		}
@@ -142,7 +158,48 @@ func (p *podConfig) match(namespace, podName, priorityClassName string, podLabel
 	return p.namespace.matchString(namespace) &&
 		p.name.matchString(podName) &&
 		p.hasPriorityClassName.matchString(priorityClassName) &&
-		hasLabels(podLabels, p.Labels)
+		hasLabels(podLabels, p.Labels) &&
+		hasOwnerReference(podOwnerReferences, p.HasOwnerReference)
+}
+
+func hasOwnerReference(existingRefs []metav1.OwnerReference, required ownerReference) bool {
+	// special case: no required owner reference
+	if required.APIVersion == "" && required.Kind == "" &&
+		required.Name == "" && required.UID == "" &&
+		required.Controller == nil && required.BlockOwnerDeletion == nil {
+		return true
+	}
+
+	// check if any existing owner reference matches the required one
+
+	for _, er := range existingRefs {
+		if ownerRefMatch(er, required) {
+			return true
+		}
+	}
+	return false
+}
+
+func ownerRefMatch(existing metav1.OwnerReference, require ownerReference) bool {
+	if (require.APIVersion == "" || existing.APIVersion == require.APIVersion) &&
+		(require.Kind == "" || existing.Kind == require.Kind) &&
+		(require.Name == "" || existing.Name == require.Name) &&
+		(require.UID == "" || string(existing.UID) == require.UID) {
+		// match controller if specified
+		if require.Controller != nil {
+			if existing.Controller == nil || *existing.Controller != *require.Controller {
+				return false
+			}
+		}
+		// match blockOwnerDeletion if specified
+		if require.BlockOwnerDeletion != nil {
+			if existing.BlockOwnerDeletion == nil || *existing.BlockOwnerDeletion != *require.BlockOwnerDeletion {
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }
 
 func hasLabels(existingLabels, requiredLabels map[string]string) bool {

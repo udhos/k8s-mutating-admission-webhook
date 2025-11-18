@@ -9,6 +9,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	api_resource "k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type resourceTestCase struct {
@@ -18,6 +19,7 @@ type resourceTestCase struct {
 	podName           string
 	priorityClassName string
 	podLabels         map[string]string
+	ownerReferences   []metav1.OwnerReference
 
 	rules string
 
@@ -400,7 +402,9 @@ func TestAddResource(t *testing.T) {
 			const debug = false
 
 			list := addResource(data.namespace, data.podName,
-				data.priorityClassName, data.podLabels, containerList,
+				data.priorityClassName, data.podLabels,
+				data.ownerReferences,
+				containerList,
 				r.Resources, debug)
 
 			expectedSize := 0

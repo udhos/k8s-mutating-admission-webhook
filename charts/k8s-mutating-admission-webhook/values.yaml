@@ -163,6 +163,19 @@ configDir:
           - #namespace: ""    # empty string matches anything
             name: ^daemonset- # match prefix
 
+      # remove exactly Exists toleration from all pods except
+      # pods that have owner reference of kind DaemonSet
+      - toleration:
+          # match exactly Exists
+          key: ^$               # match only the empty string
+          operator: ^Exists$
+          value: ^$             # match only the empty string
+          effect: ^$            # match only the empty string
+        allowed_pods:
+          # ... except pods that have owner reference of kind DaemonSet
+          - has_owner_reference:
+              kind: DaemonSet
+
     # if the pod matches multiple place_pods rules,
     # it will receive tolerations and node_selectors
     # only from the FIRST matching rule.

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type placePodsTestCase struct {
@@ -16,6 +17,7 @@ type placePodsTestCase struct {
 	priorityClassName string
 	priority          *int32
 	podLabels         string
+	ownerReferences   []metav1.OwnerReference
 	containers        []corev1.Container
 	expected          string
 }
@@ -413,8 +415,8 @@ func TestPlacePods(t *testing.T) {
 
 		for _, r := range ruleList.Rules {
 			list = append(list, addPlacement(data.namespace, data.podName,
-				data.priorityClassName, data.priority, podLabels, data.containers,
-				r.PlacePods)...)
+				data.priorityClassName, data.priority, podLabels,
+				data.ownerReferences, data.containers, r.PlacePods)...)
 		}
 
 		result := fmt.Sprintf("%v", list)

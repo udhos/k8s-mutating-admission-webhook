@@ -7,9 +7,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	api_resource "k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func addResource(namespace, podName, priorityClassName string, podLabels map[string]string,
+	podOwnerReferences []metav1.OwnerReference,
 	containers []corev1.Container, resources []setResource,
 	debug bool) []string {
 
@@ -21,7 +23,8 @@ func addResource(namespace, podName, priorityClassName string, podLabels map[str
 	// scan resource rules
 	//
 	for _, r := range resources {
-		if !r.Pod.match(namespace, podName, priorityClassName, podLabels) {
+		if !r.Pod.match(namespace, podName, priorityClassName, podLabels,
+			podOwnerReferences) {
 			continue
 		}
 		// found pod

@@ -6,12 +6,14 @@ import (
 	"log"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // addPlacement adds tolerations, nodeSelector, priorityClass, container env vars.
 func addPlacement(namespace, podName, priorityClassName string,
 	priority *int32,
 	podLabels map[string]string,
+	ownerReferences []metav1.OwnerReference,
 	containers []corev1.Container,
 	placePods []placementConfig) []string {
 
@@ -20,7 +22,8 @@ func addPlacement(namespace, podName, priorityClassName string,
 	//
 	for _, pc := range placePods {
 
-		if pc.match(namespace, podName, priorityClassName, podLabels) {
+		if pc.match(namespace, podName, priorityClassName, podLabels,
+			ownerReferences) {
 			//
 			// found add rule for pod
 			//

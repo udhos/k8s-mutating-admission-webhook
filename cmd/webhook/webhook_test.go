@@ -8,17 +8,19 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type tolerationTestCase struct {
-	testName          string
-	rules             string
-	podTolerations    string
-	namespace         string
-	podName           string
-	priorityClassName string
-	podLabels         string
-	expectedIndices   string
+	testName           string
+	rules              string
+	podTolerations     string
+	namespace          string
+	podName            string
+	priorityClassName  string
+	podLabels          string
+	podOwnerReferences string
+	expectedIndices    string
 }
 
 const emptyRule = ``
@@ -138,6 +140,22 @@ rules:
             good: pod
 `
 
+const rulesOnlyPodWithMetadataOwnerReferenceDaemonSetCanHaveExactlyExists = `
+rules:
+- restrict_tolerations:
+  - toleration:
+      # match only Exists
+      # removes exactly Exists toleration from all pods except ...
+      key: ^$               # match only the empty string
+      operator: ^Exists$
+      value: ^$             # match only the empty string
+      effect: ^$            # match only the empty string
+    allowed_pods:
+      # ... except pods that have owner reference of kind DaemonSet
+      - has_owner_reference:
+          kind: DaemonSet
+`
+
 var tolerationTestTable = []tolerationTestCase{
 	{
 		testName:        "empty rule, empty toleration",
@@ -212,6 +230,32 @@ var tolerationTestTable = []tolerationTestCase{
 		expectedIndices: "[]",
 	},
 	{
+		testName:        "only pods with owner reference kind DaemonSet can have exactly Exists, no reference",
+		rules:           rulesOnlyPodWithMetadataOwnerReferenceDaemonSetCanHaveExactlyExists,
+		podTolerations:  tolerationsExists,
+		namespace:       "default",
+		podName:         "pod-1",
+		expectedIndices: "[1]",
+	},
+	{
+		testName:           "only pods with owner reference kind DaemonSet can have exactly Exists, kind DaemonSet",
+		rules:              rulesOnlyPodWithMetadataOwnerReferenceDaemonSetCanHaveExactlyExists,
+		podTolerations:     tolerationsExists,
+		namespace:          "default",
+		podName:            "pod-1",
+		podOwnerReferences: `[{"kind":"DaemonSet"}]`,
+		expectedIndices:    "[]",
+	},
+	{
+		testName:           "only pods with owner reference kind DaemonSet can have exactly Exists, kind StatefulSet",
+		rules:              rulesOnlyPodWithMetadataOwnerReferenceDaemonSetCanHaveExactlyExists,
+		podTolerations:     tolerationsExists,
+		namespace:          "default",
+		podName:            "pod-1",
+		podOwnerReferences: `[{"kind":"StatefulSet"}]`,
+		expectedIndices:    "[1]",
+	},
+	{
 		testName:        "accept Exists for datadog- prefixed pod",
 		rules:           rulesOnlyPodDaemonSetCanHaveExactlyExistsWithAnd,
 		podTolerations:  tolerationsExists,
@@ -264,10 +308,11 @@ var tolerationTestTable = []tolerationTestCase{
 	},
 }
 
+// go test -count 1 -run ^TestRestrictTolerations$ ./...
 func TestRestrictTolerations(t *testing.T) {
 
 	for i, data := range tolerationTestTable {
-		testLabel := fmt.Sprintf("%d: %s:", i, data.testName)
+		testLabel := fmt.Sprintf("%d of %d: %s:", i+1, len(tolerationTestTable), data.testName)
 
 		ruleList, errRule := newRules([]byte(data.rules))
 		if errRule != nil {
@@ -294,13 +339,24 @@ func TestRestrictTolerations(t *testing.T) {
 			if len(ruleList.Rules) != 1 {
 				t.Fatalf("%s bad number of rules (should be 1): %d",
 					testLabel, len(ruleList.Rules))
-				continue
 			}
 			r = ruleList.Rules[0]
 		}
 
+		var podOwnerReferences []metav1.OwnerReference
+		if data.podOwnerReferences != "" {
+			errRef := json.Unmarshal([]byte(data.podOwnerReferences), &podOwnerReferences)
+			if errRef != nil {
+				t.Errorf("%s bad pod owner references: %v", testLabel, errRef)
+			}
+		}
+
+		t.Logf("podOwnerReferences: %v", podOwnerReferences)
+
 		list := removeTolerationsIndices(data.namespace, data.podName,
-			data.priorityClassName, podLabels, podTolerations,
+			data.priorityClassName, podLabels,
+			podOwnerReferences,
+			podTolerations,
 			r.RestrictTolerations)
 
 		str := fmt.Sprintf("%v", list)
