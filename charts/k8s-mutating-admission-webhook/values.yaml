@@ -103,6 +103,7 @@ configMapProperties:
   #CERT_AUTOCHECK: "true"
   #CERT_AUTOCHECK_INTERVAL: 10s
   #CERT_AUTOCHECK_ERROR_LIMIT: "3"
+  #REQUIRE_KNOWN_FIELDS: "false"
   #
   # Ignore: means that an error calling the webhook is ignored and the API request is allowed to continue.
   # Fail: means that an error calling the webhook causes the admission to fail and the API request to be rejected.

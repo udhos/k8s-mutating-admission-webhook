@@ -314,7 +314,8 @@ func TestRestrictTolerations(t *testing.T) {
 	for i, data := range tolerationTestTable {
 		testLabel := fmt.Sprintf("%d of %d: %s:", i+1, len(tolerationTestTable), data.testName)
 
-		ruleList, errRule := newRules([]byte(data.rules))
+		const requireKnownFields = false
+		ruleList, errRule := newRules([]byte(data.rules), requireKnownFields)
 		if errRule != nil {
 			t.Errorf("%s bad rule: %v", testLabel, errRule)
 		}

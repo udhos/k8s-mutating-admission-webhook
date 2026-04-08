@@ -60,7 +60,9 @@ rules:
         node: alpha
 `
 
-	list, errInput := newRules([]byte(input))
+	const requireKnownFields = false
+
+	list, errInput := newRules([]byte(input), requireKnownFields)
 	if errInput != nil {
 		t.Errorf("input: %v", errInput)
 	}
@@ -85,5 +87,27 @@ rules:
 	if len(r.PlacePods[0].Add.NodeSelector) != 1 {
 		t.Errorf("bad number of node selector labels (should be 1): %d",
 			len(r.PlacePods[0].Add.NodeSelector))
+	}
+}
+
+// go test -count 1 -run '^TestNewRulesRequireKnownFields$' ./...
+func TestNewRulesRequireKnownFields(t *testing.T) {
+	const input = `
+rules:
+- place_pods:
+  - pods:
+      - namespace: ""
+        unknown_field: value
+    add:
+      node_selector:
+        node: alpha
+`
+
+	if _, err := newRules([]byte(input), false); err != nil {
+		t.Fatalf("unexpected error without strict mode: %v", err)
+	}
+
+	if _, err := newRules([]byte(input), true); err == nil {
+		t.Fatal("expected error with strict mode enabled, got nil")
 	}
 }

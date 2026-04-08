@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"log"
 	"os"
 	"strings"
@@ -226,19 +227,27 @@ func matchLabelValue(existing, required string) bool {
 	return pat.matchString(existing)
 }
 
-func loadRules(path string) (rulesList, error) {
+func loadRules(path string, requireKnownFields bool) (rulesList, error) {
 	data, errRead := os.ReadFile(path)
 	if errRead != nil {
 		return rulesList{}, errRead
 	}
-	return newRules(data)
+	return newRules(data, requireKnownFields)
 }
 
-func newRules(data []byte) (rulesList, error) {
+func newRules(data []byte, requireKnownFields bool) (rulesList, error) {
 	var list rulesList
 
-	if errYaml := yaml.Unmarshal(data, &list); errYaml != nil {
-		return list, errYaml
+	if requireKnownFields {
+		decoder := yaml.NewDecoder(bytes.NewReader(data))
+		decoder.KnownFields(true)
+		if errYaml := decoder.Decode(&list); errYaml != nil {
+			return list, errYaml
+		}
+	} else {
+		if errYaml := yaml.Unmarshal(data, &list); errYaml != nil {
+			return list, errYaml
+		}
 	}
 
 	for _, r := range list.Rules {

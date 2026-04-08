@@ -22,6 +22,7 @@ type config struct {
 	certAutocheck           bool
 	certAutocheckInterval   time.Duration
 	certAutocheckErrorLimit int
+	requireKnownFields      bool
 
 	// Ignore: means that an error calling the webhook is ignored and the API request is allowed to continue.
 	// Fail: means that an error calling the webhook causes the admission to fail and the API request to be rejected.
@@ -48,6 +49,7 @@ func getConfig() config {
 		certAutocheck:           envBool("CERT_AUTOCHECK", true),
 		certAutocheckInterval:   envDuration("CERT_AUTOCHECK_INTERVAL", 10*time.Second),
 		certAutocheckErrorLimit: envInt("CERT_AUTOCHECK_ERROR_LIMIT", 3),
+		requireKnownFields:      envBool("REQUIRE_KNOWN_FIELDS", false),
 		failurePolicy:           envString("FAILURE_POLICY", "Ignore"),
 		reinvocationPolicy:      envString("REINVOCATION_POLICY", "IfNeeded"),
 

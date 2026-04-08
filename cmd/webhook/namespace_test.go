@@ -114,7 +114,9 @@ func TestNamespace(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 
-			ruleList, errRule := newRules([]byte(data.rules))
+			const requireKnownFields = false
+
+			ruleList, errRule := newRules([]byte(data.rules), requireKnownFields)
 			if errRule != nil {
 				t.Errorf("bad rule: %v", errRule)
 			}

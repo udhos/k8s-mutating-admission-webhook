@@ -391,7 +391,9 @@ func TestPlacePods(t *testing.T) {
 		testLabel := fmt.Sprintf("%d of %d: %s:", i+1,
 			len(placePodsTestTable), data.testName)
 
-		ruleList, errRule := newRules([]byte(data.rules))
+		const requireKnownFields = false
+
+		ruleList, errRule := newRules([]byte(data.rules), requireKnownFields)
 		if errRule != nil {
 			t.Errorf("%s bad rule: %v", testLabel, errRule)
 		}

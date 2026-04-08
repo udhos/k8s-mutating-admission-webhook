@@ -52,7 +52,7 @@ func main() {
 	}
 
 	{
-		r, errRules := loadRules(app.conf.rulesFile)
+		r, errRules := loadRules(app.conf.rulesFile, app.conf.requireKnownFields)
 		if errRules != nil {
 			log.Fatalf("rules load: %s: %v", app.conf.rulesFile, errRules)
 		}
