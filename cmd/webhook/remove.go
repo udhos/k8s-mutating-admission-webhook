@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -97,11 +98,8 @@ func removeNodeSelectors(namespace, podName string, nodeSelector map[string]stri
 
 	for removeKey := range nodeSelector {
 		var accepted bool
-		for _, acceptKey := range acceptSelectors {
-			if removeKey == acceptKey {
-				accepted = true
-				break
-			}
+		if slices.Contains(acceptSelectors, removeKey) {
+			accepted = true
 		}
 		if !accepted {
 			key := escapeJSONPointer(removeKey)

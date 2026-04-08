@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"slices"
 	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
@@ -100,11 +101,8 @@ func handlePod(app *application, w http.ResponseWriter,
 	var patch string
 
 	var ignore bool
-	for _, ns := range app.conf.ignoreNamespaces {
-		if namespace == ns {
-			ignore = true
-			break
-		}
+	if slices.Contains(app.conf.ignoreNamespaces, namespace) {
+		ignore = true
 	}
 
 	if ignore {
@@ -204,11 +202,8 @@ func handleDaemonset(app *application, w http.ResponseWriter,
 	var patch string
 
 	var ignore bool
-	for _, ns := range app.conf.ignoreNamespaces {
-		if namespace == ns {
-			ignore = true
-			break
-		}
+	if slices.Contains(app.conf.ignoreNamespaces, namespace) {
+		ignore = true
 	}
 
 	if ignore {

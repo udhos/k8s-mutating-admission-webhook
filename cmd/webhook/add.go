@@ -76,8 +76,15 @@ func setPriorityClass(namespace, podName, newClass, oldClass string, priority *i
 		priorityStr = "<undefined>"
 	}
 
-	log.Printf("setPriorityClass: ns=%s pod=%s oldClass='%s' newClass='%s' oldPriority=%s",
-		namespace, podName, oldClass, newClass, priorityStr)
+	classChanged := oldClass != newClass
+
+	log.Printf("setPriorityClass: ns=%s pod=%s classChanged=%t oldClass='%s' newClass='%s' oldPriority=%s",
+		namespace, podName, classChanged, oldClass, newClass, priorityStr)
+
+	if !classChanged {
+		// no change to priority class, so do not modify priority or priorityClassName
+		return list
+	}
 
 	// add or replace priorityClassName
 	str := fmt.Sprintf(`{"op":"add","path":"/spec/priorityClassName","value":"%s"}`,

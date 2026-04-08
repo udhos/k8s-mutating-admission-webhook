@@ -18,8 +18,8 @@ const patternNegatePrefix = "_"
 
 func patternCompile(s string) (*pattern, error) {
 	p := &pattern{}
-	if strings.HasPrefix(s, patternNegatePrefix) {
-		s = strings.TrimPrefix(s, patternNegatePrefix)
+	if after, ok := strings.CutPrefix(s, patternNegatePrefix); ok {
+		s = after
 		p.negate = true
 	}
 	re, err := regexp.Compile(s)
