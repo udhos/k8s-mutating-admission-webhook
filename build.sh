@@ -17,9 +17,7 @@ staticcheck ./...
 
 modernize -fix ./...
 
-echo gocyclo begin
 gocyclo -over 15 .
-echo gocyclo end
 
 ineffassign ./...
 

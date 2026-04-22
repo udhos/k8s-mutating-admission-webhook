@@ -21,7 +21,7 @@ RUN go build -o /tmp/webhook github.com/udhos/k8s-mutating-admission-webhook/cmd
 #
 # curl: https://security.alpinelinux.org/srcpkg/curl
 #
-FROM alpine:3.23.3
+FROM alpine:3.23.4
 COPY --from=builder /tmp/webhook /bin/webhook
 #RUN apk add curl=8.1.2-r0 libcrypto3=3.1.0-r4 libssl3=3.1.0-r4
 RUN apk update && \
